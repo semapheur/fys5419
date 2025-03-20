@@ -24,24 +24,26 @@ class OptimizerState(TypedDict, total=False):
 
 
 def parameter_shift_gradient(
-  angles: np.ndarray, interaction_strength: float, energy_fn: Callable
-) -> np.ndarray:
+  angles: NDArray[np.float64],
+  interaction_strength: float,
+  energy_fn: Callable[[NDArray[np.float64], float], float],
+) -> NDArray[np.float64]:
   """
   Calculate gradient using parameter shift rule.
 
   Args:
-    angles (np.ndarray): Parameter vector [theta, phi]
+    angles (NDArray[np.float64],]): Parameter vector [theta, phi]
     interaction_strength (float): Interaction strength parameter
     energy_fn (Callable): Energy calculation function
 
   Returns:
-    np.ndarray: Gradient vector
+    NDArray[np.float64],: Gradient vector
   """
 
   grad = np.zeros_like(angles)
   shift = np.pi / 2
 
-  shifts: list[tuple[np.ndarray, float]] = []
+  shifts: list[tuple[NDArray[np.float64], float]] = []
   for i in range(len(angles)):
     angles_plus = angles.copy()
     angles_plus[i] += shift
@@ -51,7 +53,7 @@ def parameter_shift_gradient(
     angles_minus[i] -= shift
     shifts.append((angles_minus, interaction_strength))
 
-  with ThreadPoolExecutor() as executor:
+  with ThreadPoolExecutor() as executor:  # Parallelize
     energies = list(executor.map(lambda args: energy_fn(*args), shifts))
 
   for i, (energy_plus, energy_minus) in enumerate(zip(energies[::2], energies[1::2])):
@@ -61,28 +63,29 @@ def parameter_shift_gradient(
 
 
 def minimize_energy(
-  angles_0: np.ndarray,
+  angles_0: NDArray[np.float64],
   energy_fn: Callable[[NDArray[np.float64], float], float],
   lmb: float,
   learning_rate: float = 0.01,
   epochs: int = 1000,
   tolerance: float = 1e-6,
   method: Optimizer = "adam",
-  line_search: bool = True,
-  early_stop: int = 20,
+  line_search: bool = False,
+  early_stop: int = 50,
   verbose: bool = True,
-):
+) -> tuple[NDArray[np.float64], float, float, int]:
   """
   Minimize energy function using gradient descent optimization.
 
   Args:
-    angles_0 (np.ndarray): Initial parameter vector [theta, phi]
+    angles_0 (NDArray[np.float64]): Initial parameter vector [theta, phi]
     energy_fn (Callable[[NDArray[np.float64], float], float]): Energy expectation function
     lmb (float): Interaction strength parameter
     learning_rate (float): Initial learning rate
     epochs (int): Maximum number of iterations
     tolerance (float): Convergence threshold for energy change
     method (str): Optimization method: "adam", "sgd", "rmsprop", "adagrad"
+    line_search (bool): Whether to use backtracking line search
     early_stop (int): Number of epochs with no improvement before early stopping
     adaptive_lr (bool): Whether to use adaptive learning rate
     verbose (bool): Whether to print optimization progress
@@ -111,7 +114,7 @@ def minimize_energy(
     # Calculate gradient
     grad = parameter_shift_gradient(angles, lmb, energy_fn)
 
-    # Update learning rate and momentum
+    # Update learning rate and optimizer state
     update, optimizer_state = optimizer_update(
       method, grad, optimizer_state, learning_rate, epoch, **OPTIMIZER_PARAMS[method]
     )
@@ -238,7 +241,7 @@ def backtracking_line_search(
   update: NDArray[np.float64],
   energy_fn: Callable[[NDArray[np.float64], float], float],
   lmb: float,
-  currenct_energy: float,
+  current_energy: float,
   alpha: float = 0.1,
   beta: float = 0.7,
   c: float = 1e-4,
@@ -252,7 +255,7 @@ def backtracking_line_search(
     update (NDArray[np.float64]): Update direction vector.
     energy_fn (Callable[[NDArray[np.float64], float], float]): Function to compute energy given angles and lambda.
     lmb (float): Lambda parameter for energy function.
-    currenct_energy (float): Current energy value.
+    current_energy (float): Current energy value.
     alpha (float, optional): Initial step size. Default is 0.1.
     beta (float, optional): Factor to decrease step size. Default is 0.7.
     c (float, optional): Armijo condition constant. Default is 1e-4.
@@ -270,7 +273,7 @@ def backtracking_line_search(
     new_energy = energy_fn(new_angles, lmb)
 
     # Armijo condition
-    if new_energy < currenct_energy + c * step_size * grad_dot_update:
+    if new_energy < current_energy + c * step_size * grad_dot_update:
       return step_size
 
     step_size *= beta

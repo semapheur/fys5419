@@ -23,7 +23,7 @@ ket1 = np.array([0.0, 1.0])
 I2 = np.eye(2)
 
 H_x = 2.0
-H_z = 1.0
+H_z = 3.0
 
 eps_00 = 0.0
 eps_01 = 2.5
@@ -37,6 +37,7 @@ D = (eps_00 - eps_01 - eps_10 + eps_11) / 4.0
 
 
 def hamiltonian(interaction_strength: float):
+  """Construct the Hamiltonian matrix for a two-qubit quantum system."""
   H_I = H_z * np.kron(sigma_z, sigma_z) + H_x * np.kron(sigma_x, sigma_x)
   H_0 = np.diag([eps_00, eps_01, eps_10, eps_11])
   H = H_0 + interaction_strength * H_I
@@ -45,6 +46,17 @@ def hamiltonian(interaction_strength: float):
 
 
 def trace_out(state: NDArray[np.complex128], index: int):
+  """
+  Calculate the reduced density matrix by tracing out a specified qubit.
+
+  Args:
+    state (NDArray[np.complex128]): State vector of the quantum system.
+    index (int): Index of the qubit to trace out.
+
+  Returns:
+    NDArray[np.complex128]: Reduced density matrix after tracing out the specified qubit.
+  """
+
   density = np.outer(state, np.conj(state))
   if index == 0:
     op0 = np.kron(ket0, I2)
@@ -57,6 +69,18 @@ def trace_out(state: NDArray[np.complex128], index: int):
 
 
 def exact_energies_and_entropies(lambdas: NDArray[np.float64]):
+  """
+  Calculate the exact energies and von Neumann entropies for a two-qubit system Hamiltonian.
+
+  Args:
+    lambdas (NDArray[np.float64]): Array of interaction strengths.
+
+  Returns:
+    Tuple[NDArray[np.float64], NDArray[np.float64]]:
+      - A 2D array of exact energies, with each row corresponding to a lambda value.
+      - A 2D array of von Neumann entropies, with each row corresponding to a lambda value.
+  """
+
   energies = np.zeros((len(lambdas), 4))
   entropies = np.zeros((len(lambdas), 4))
 

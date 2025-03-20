@@ -29,7 +29,7 @@ class Qubit:
 
     Args:
       theta (float): Polar angle in radians [0, π]
-      phi (float): Azimuthal angle in radians [0, 2π]
+      phi (float): Azimuthal angle in radians [0, 2π)
     """
 
     if theta == 0:  # Explicitly set |0> state
@@ -92,21 +92,6 @@ class Qubit:
 
     return [int(np.random.choice(2, p=self.get_probabilities())) for _ in range(shots)]
 
-  def hadamard_gate(self):
-    """Apply Hadamard gate: Creates superposition."""
-    hadamard = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
-    self.state = hadamard @ self.state
-
-  def phase_gate(self, alpha: float):
-    """
-    Apply phase gate with given angle.
-
-    Args:
-      alpha (float): Phase angle in radians
-    """
-    phase = np.array([[1, 0], [0, np.exp(1j * alpha)]])
-    self.state = phase @ self.state
-
   def x_gate(self):
     """Apply Pauli-X gate: Bit flip."""
     x = np.array([[0, 1], [1, 0]])
@@ -139,6 +124,26 @@ class Qubit:
       basis_states = ("|0⟩", "|1⟩")
 
     return f"({state[0]:.{decimals}f}){basis_states[0]} + ({state[1]:.{decimals}f}){basis_states[1]}"
+
+  def hadamard_gate(self):
+    """Apply Hadamard gate: Creates superposition."""
+    hadamard = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
+    self.state = hadamard @ self.state
+
+  def phase_gate(self, alpha: float):
+    """
+    Apply phase gate with given angle.
+
+    Args:
+      alpha (float): Phase angle in radians
+    """
+    phase = np.array([[1, 0], [0, np.exp(1j * alpha)]])
+    self.state = phase @ self.state
+
+  def s_gate(self):
+    """Apply the S gate."""
+    s = np.array([[1, 0], [0, 1j]])
+    self.state = s @ self.state
 
   def bloch_str(self, decimals: int = 3) -> str:
     """Return a string representation of the qubit in Bloch angles."""
@@ -362,7 +367,7 @@ class NQubitState:
     self.state = controlled_gate @ self.state
 
   def hadamard_gate(self, target: int):
-    """Apply a Hadamard gate to the specified qubit(s).
+    """Apply a Hadamard gate to the specified qubit.
 
     Args:
       target (int): Index of target qubit"""
@@ -371,7 +376,7 @@ class NQubitState:
     self.apply_unary_gate(H, target)
 
   def x_gate(self, target: int):
-    """Apply a Pauli-X gate to the specified qubit(s).
+    """Apply a Pauli-X gate to the specified qubit.
 
     Args:
       target (int): Index of target qubit"""
@@ -563,10 +568,10 @@ def create_bell_state(state: Literal[0, 1, 2, 3]) -> NQubitState:
 
   Args:
     state (int): Bell state to initialize the qubit in. Can be 0, 1, 2, or 3.
-    - 0 initializes |00⟩ resulting in |Φ+⟩ = (1/√2)|00⟩ + (1/√2)|11⟩
-    - 1 initializes |01⟩ resulting in |Ψ+⟩ = (1/√2)|01⟩ + (1/√2)|10⟩
-    - 2 initializes |10⟩ resulting in |Ψ-⟩ = (1/√2)|00⟩ - (1/√2)|11⟩
-    - 3 initializes |11⟩ resulting in |Φ-⟩ = (1/√2)|01⟩ - (1/√2)|10⟩
+    - 0 initializes |00⟩ resulting in |Φ+⟩ = (1/√2)*(|00⟩ + |11⟩)
+    - 1 initializes |01⟩ resulting in |Ψ+⟩ = (1/√2)*(|01⟩ + |10⟩)
+    - 2 initializes |10⟩ resulting in |Ψ-⟩ = (1/√2)*(|00⟩ - |11⟩)
+    - 3 initializes |11⟩ resulting in |Φ-⟩ = (1/√2)*(|01⟩ - |10⟩)
   """
 
   bell_state = NQubitState(2, basis_state=state)
@@ -578,30 +583,21 @@ def create_bell_state(state: Literal[0, 1, 2, 3]) -> NQubitState:
 
 def bell_state_circuit(state: Literal[0, 1, 2, 3]) -> QuantumCircuit:
   """
-  Initialize a quantum circuit in a Bell state.
+  Initialize a quantum circuit in a Bell state using Qiskit
 
   Args:
     state (str): Bell state to initialize the qubit in. Can be 0, 1, 2, or 3.
-    - 0 initializes |00⟩ resulting in |Φ+⟩ = (1/√2)|00⟩ + (1/√2)|11⟩
-    - 1 initializes |01⟩ resulting in |Ψ+⟩ = (1/√2)|01⟩ + (1/√2)|10⟩
-    - 2 initializes |10⟩ resulting in |Ψ-⟩ = (1/√2)|00⟩ - (1/√2)|11⟩
-    - 3 initializes |11⟩ resulting in |Φ-⟩ = (1/√2)|01⟩ - (1/√2)|10⟩
+    - 0 initializes |00⟩ resulting in |Φ+⟩ = (1/√2)*(|00⟩ + |11⟩)
+    - 1 initializes |01⟩ resulting in |Ψ+⟩ = (1/√2)*(|01⟩ + |10⟩)
+    - 2 initializes |10⟩ resulting in |Ψ-⟩ = (1/√2)*(|00⟩ - |11⟩)
+    - 3 initializes |11⟩ resulting in |Φ-⟩ = (1/√2)*(|01⟩ - |10⟩)
   """
 
   qc = QuantumCircuit(2, 2)
   qc.initialize(f"{state:0{2}b}", [0, 1])
 
-  # Apply Hadamard gate and CNOT to create |Φ+⟩
   qc.h(0)  # Apply Hadamard gate to first qubit
   qc.cx(0, 1)  # Apply CNOT gate
-
-  if state == "Φ-":
-    qc.z(0)  # Apply Z gate to first qubit
-  elif state == "Ψ+":
-    qc.x(1)  # Apply X gate to second qubit
-  elif state == "Ψ-":
-    qc.x(0)  # Apply X gate to first qubit
-    qc.z(0)  # Apply Z gate to first qubit
 
   return qc
 

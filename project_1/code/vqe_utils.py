@@ -321,13 +321,12 @@ def vqe_energies(
   Args:
     angle_parameters (int): Number of angle parameters
     energy_fn (Callable): Energy expectation function
+    lambdas (np.ndarray): Array of lambda values to evaluate
     shots (int): Number of measurement shots per expectation calculation
     max_epochs (int): Maximum optimization epochs per lambda
     learning_rate (float): Initial learning rate for optimization
-    lambdas (np.ndarray): Array of lambda values to evaluate
-    num_restarts (int): Number of random initializations to try
+    method (Optimizer): Optimization method
     verbose (bool): Whether to print progress information
-    qiskit (bool): Whether to use Qiskit simulator
 
   Returns:
     Tuple: (energies, epochs_used, optimal_angles)

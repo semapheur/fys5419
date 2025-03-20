@@ -417,15 +417,15 @@ wheels = [
 
 [[package]]
 name = "mystmd"
-version = "1.3.23"
+version = "1.3.25"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "nodeenv" },
     { name = "platformdirs" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/96/d7/1b2ddcd2291e3818932d37e5f87af90772bf1d975fdbc55cd8c5568e1016/mystmd-1.3.23.tar.gz", hash = "sha256:3f7f6c88ebe30957c3278ab8ccde456e4e735541f406c113c4f416f74b9295e4", size = 2590385 }
+sdist = { url = "https://files.pythonhosted.org/packages/85/ce/40f8a6642b66bced63c65292f2dbbfdc246592f2e89bbac15e279c8e81ae/mystmd-1.3.25.tar.gz", hash = "sha256:230ef8ca4dd6ab4c60f84a8d0929d0ac319cb97bc1a06e275e39d73747a0cfe6", size = 2592517 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3f/ce/47c5b6f8e8406489ecbbe0dbd9fbc32980c6a57ceccf78f5a5c5c7571519/mystmd-1.3.23-py3-none-any.whl", hash = "sha256:50c3e752168202214455376cc9d849196c0cfddfd07b0a0ea465ea5fa167e2a6", size = 2621601 },
+    { url = "https://files.pythonhosted.org/packages/19/a9/d90cc3139fc3a905569726383a69fc7701abbb936ff93e9fd826d8c19c51/mystmd-1.3.25-py3-none-any.whl", hash = "sha256:88cf565944ee80a51dcf4ab7c88683f15e3996982012359159aebaa79b672d3f", size = 2623686 },
 ]
 
 [[package]]

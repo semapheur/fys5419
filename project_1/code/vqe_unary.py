@@ -44,7 +44,26 @@ def hamiltonian(interaction_strength: float) -> NDArray[np.float64]:
   return H
 
 
-def exact_energies(lambdas: NDArray[np.float64]) -> NDArray[np.float64]:
+def analytic_energies(lambdas: NDArray[np.float64]) -> NDArray[np.float64]:
+  """
+  Calculate the analytic energies of a single-qubit Hamiltonian for a set of interaction strengths.
+
+  Args:
+    lambdas (NDArray[np.float64]): Array of interaction strengths
+
+  Returns:
+    NDArray[np.float64]: 2-column array of analytic energies, sorted in ascending order for each interaction strength
+  """
+
+  root = np.sqrt(np.square(omega + lambdas * omega_z) + np.square(lambdas * omega_x))
+
+  E_minus = epsilon + lambdas * c - root
+  E_plus = epsilon + lambdas * c + root
+
+  return np.column_stack((E_minus, E_plus))
+
+
+def numeric_energies(lambdas: NDArray[np.float64]) -> NDArray[np.float64]:
   """
   Calculate the exact energies of a single-qubit Hamiltonian for a set of interaction strengths.
 
@@ -79,11 +98,12 @@ def energy_expectation(
   angles: NDArray[np.float64], interaction_strength: float, shots: int
 ) -> float:
   """
-  Calculate energy expectation value.
+  Calculate energy expectation value for a single-qubit Hamiltonian of the form
+  H = epsilon * I + omega * Z + c * I + omega_z * Z + omega_x * X
 
   Args:
-    lmb (float): Interaction strength parameter
     angles (NDArray[np.float64]): Parameter vector [theta, phi]
+    interaction_strength (float): Interaction strength parameter
     shots (int): Number of measurement shots
 
   Returns:
