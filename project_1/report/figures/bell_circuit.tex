@@ -1,0 +1,10 @@
+\documentclass[border=2px]{standalone}
+
+\usepackage{quantikz}
+
+\begin{document}
+\begin{quantikz}[wire types={q,q}]
+  \lstick{\ket{0}} & \gate{H} & \ctrl{1} & & \targ{} & \meter{} & \\
+  \lstick{\ket{1}} & & \targ{} & \gate{H} & \ctrl{-1} & & \meter{}
+\end{quantikz}
+\end{document}

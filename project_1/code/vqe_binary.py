@@ -17,11 +17,6 @@ from vqe_utils import (
 sigma_x = np.array([[0.0, 1.0], [1.0, 0.0]])
 sigma_z = np.array([[1.0, 0.0], [0.0, -1.0]])
 
-ket0 = np.array([1.0, 0.0])
-ket1 = np.array([0.0, 1.0])
-
-I2 = np.eye(2)
-
 H_x = 2.0
 H_z = 3.0
 
@@ -30,10 +25,10 @@ eps_01 = 2.5
 eps_10 = 6.5
 eps_11 = 7.0
 
-A = (eps_00 + eps_01 + eps_10 + eps_11) / 4.0
-B = (eps_00 - eps_01 + eps_10 - eps_11) / 4.0
-C = (eps_00 + eps_01 - eps_10 - eps_11) / 4.0
-D = (eps_00 - eps_01 - eps_10 + eps_11) / 4.0
+eps_ii = (eps_00 + eps_01 + eps_10 + eps_11) / 4.0
+eps_zi = (eps_00 + eps_01 - eps_10 - eps_11) / 4.0
+eps_iz = (eps_00 - eps_01 + eps_10 - eps_11) / 4.0
+eps_zz = (eps_00 - eps_01 - eps_10 + eps_11) / 4.0
 
 
 def hamiltonian(interaction_strength: float):
@@ -47,7 +42,8 @@ def hamiltonian(interaction_strength: float):
 
 def trace_out(state: NDArray[np.complex128], index: int):
   """
-  Calculate the reduced density matrix by tracing out a specified qubit.
+  Calculate the reduced density matrix of a two-qubit state by tracing out a specified qubit.
+  Based from https://github.com/CompPhysics/QuantumComputingMachineLearning/blob/gh-pages/doc/Programs/LipkinModel/two_qubit_VQE.ipynb
 
   Args:
     state (NDArray[np.complex128]): State vector of the quantum system.
@@ -56,6 +52,17 @@ def trace_out(state: NDArray[np.complex128], index: int):
   Returns:
     NDArray[np.complex128]: Reduced density matrix after tracing out the specified qubit.
   """
+
+  state_dim = state.shape[0]
+  if state_dim != 4:
+    raise ValueError("State vector must have dimension 4")
+
+  if index < 0 or index > 1:
+    raise ValueError("Index must be 0 or 1")
+
+  I2 = np.eye(2)
+  ket0 = np.array([1.0, 0.0])
+  ket1 = np.array([0.0, 1.0])
 
   density = np.outer(state, np.conj(state))
   if index == 0:
@@ -71,6 +78,8 @@ def trace_out(state: NDArray[np.complex128], index: int):
 def exact_energies_and_entropies(lambdas: NDArray[np.float64]):
   """
   Calculate the exact energies and von Neumann entropies for a two-qubit system Hamiltonian.
+  Based from https://github.com/CompPhysics/QuantumComputingMachineLearning/blob/gh-pages/doc/Programs/LipkinModel/two_qubit_VQE.ipynb
+
 
   Args:
     lambdas (NDArray[np.float64]): Array of interaction strengths.
@@ -121,7 +130,7 @@ def energy_expectation(
   Calculate energy expectation value of a two-qubit Hamiltonian
 
   The Hamiltonian is of the form:
-  H = A*I⊗I + B*I⊗Z + C*Z⊗I + (D + lmb*H_z)*Z⊗Z + lmb*H_x*X⊗X
+  H = eps_II * I⊗I + eps_IZ * I⊗Z + eps_ZI * Z⊗I + (eps_ZZ + lmb * H_z) * Z⊗Z + lmb * H_x * X⊗X
 
   Args:
     angles (NDArray[np.float64]): Parameter vector [theta_0, phi_0, theta_1, phi_1]
@@ -135,15 +144,15 @@ def energy_expectation(
   # Prepare ansatz
   ansatz = prepare_ansatz(angles)
 
-  with ThreadPoolExecutor(max_workers=4) as executor:
-    future_zi = executor.submit(measure_nth_z, ansatz.copy(), 1, shots)  # Measure Z⊗I
-    future_iz = executor.submit(measure_z, ansatz.copy(), shots)  # Measure I⊗Z
+  with ThreadPoolExecutor(max_workers=4) as executor:  # Parallelize
+    future_zi = executor.submit(measure_z, ansatz.copy(), shots)  # Measure Z⊗I
+    future_iz = executor.submit(measure_nth_z, ansatz.copy(), 1, shots)  # Measure I⊗Z
     future_zz = executor.submit(measure_zz, ansatz.copy(), shots)  # Measure Z⊗Z
     future_xx = executor.submit(measure_xx, ansatz.copy(), shots)  # Measure X⊗X
 
     try:
-      expectation_iz = future_iz.result()
       expectation_zi = future_zi.result()
+      expectation_iz = future_iz.result()
       expectation_zz = future_zz.result()
       expectation_xx = future_xx.result()
     except Exception as e:
@@ -151,10 +160,10 @@ def energy_expectation(
 
   # Calculate expectation value
   exp_val = (
-    A
-    + B * expectation_iz
-    + C * expectation_zi
-    + (D + interaction_strength * H_z) * expectation_zz
+    eps_ii
+    + eps_zi * expectation_zi
+    + eps_iz * expectation_iz
+    + (eps_zz + interaction_strength * H_z) * expectation_zz
     + (interaction_strength * H_x * expectation_xx)
   )
 
@@ -179,7 +188,7 @@ def qiskit_energy_expectation(
   Calculate energy expectation value of a two-qubit Hamiltonian using Qiskit
 
   The Hamiltonian is of the form:
-  H = A * I⊗I + B * I⊗Z + C * Z⊗I + (D + λ * H_z) * Z⊗Z + λ * H_x * X⊗X
+  H = eps_II * I⊗I + eps_IZ * I⊗Z + eps_ZI * Z⊗I + (eps_ZZ + lmb * H_z) * Z⊗Z + lmb * H_x * X⊗X
 
   Args:
     angles (NDArray[np.float64]): Parameter vector [theta_0, phi_0, theta_1, phi_1]
@@ -192,18 +201,18 @@ def qiskit_energy_expectation(
 
   circuit = qiskit_ansatz(angles)
 
+  # Z⊗I measurement circuit
+  circuit_zi = circuit.copy()
+  creg_iz = qk.ClassicalRegister(2, "zi")
+  circuit_zi.add_register(creg_iz)
+  circuit_zi.measure([0, 1], creg_iz)
+
   # I⊗Z measurement circuit
   circuit_iz = circuit.copy()
   creg_iz = qk.ClassicalRegister(2, "iz")
   circuit_iz.add_register(creg_iz)
   circuit_iz.swap(0, 1)
   circuit_iz.measure([0, 1], creg_iz)
-
-  # Z⊗I measurement circuit
-  circuit_zi = circuit.copy()
-  creg_iz = qk.ClassicalRegister(2, "zi")
-  circuit_zi.add_register(creg_iz)
-  circuit_zi.measure([0, 1], creg_iz)
 
   # Z⊗Z measurement circuit
   circuit_zz = circuit.copy()
@@ -222,7 +231,7 @@ def qiskit_energy_expectation(
   circuit_xx.measure([0, 1], creg_xx)
 
   # Execute circuits
-  measurement_circuits = [circuit_iz, circuit_zi, circuit_zz, circuit_xx]
+  measurement_circuits = [circuit_zi, circuit_iz, circuit_zz, circuit_xx]
 
   simulator = qiskit_aer.Aer.get_backend("qasm_simulator")
   transpiled_circuits = qk.transpile(measurement_circuits, simulator)
@@ -236,10 +245,10 @@ def qiskit_energy_expectation(
   ]
 
   exp_val = (
-    A
-    + B * measurements[0]
-    + C * measurements[1]
-    + (D + interaction_strength * H_z) * measurements[2]
+    eps_ii
+    + eps_zi * measurements[0]
+    + eps_iz * measurements[1]
+    + (eps_zz + interaction_strength * H_z) * measurements[2]
     + (interaction_strength * H_x * measurements[3])
   )
 

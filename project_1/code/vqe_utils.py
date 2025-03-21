@@ -5,6 +5,7 @@ import numpy as np
 from numpy.typing import NDArray
 import qiskit as qk
 from scipy.optimize import minimize
+from tqdm import tqdm
 
 from qubit import NQubitState
 from optimize import minimize_energy, Optimizer
@@ -123,7 +124,7 @@ def measure_z(qubit: NQubitState, shots: int) -> float:
 
 def measure_nth_z(qubit: NQubitState, z_index: int, shots: int) -> float:
   """
-  Measure a qubit state in the I⊗...I⊗Z⊗I⊗...⊗I basis, where Z is in the z_index position
+  Measure a qubit state in the I⊗...⊗I⊗Z⊗I⊗...⊗I basis, where Z is in the z_index position
 
   Args:
     qubit (NQubitState): Qubit state to measure
@@ -198,79 +199,9 @@ def measure_yy(qubit: NQubitState, shots: int) -> float:
   return measurement_expectation(outcome, shots)
 
 
-def measure_ziii(qubit: NQubitState, shots: int) -> float:
-  """
-  Measure a four-qubit state in the Z⊗I⊗I⊗I basis
-
-  Args:
-    qubit (NQubitState): Qubit state to measure
-    shots (int): Number of measurement shots
-
-  Returns:
-    float: Expectation value
-  """
-
-  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
-  return measurement_expectation(outcome, shots)
-
-
-def measure_izii(qubit: NQubitState, shots: int) -> float:
-  """
-  Measure a four-qubit state in the I⊗Z⊗I⊗I basis
-
-  Args:
-    qubit (NQubitState): Qubit state to measure
-    shots (int): Number of measurement shots
-
-  Returns:
-    float: Expectation value
-  """
-  qubit.swap_gate(0, 1)
-
-  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
-  return measurement_expectation(outcome, shots)
-
-
-def measure_iizi(qubit: NQubitState, shots: int) -> float:
-  """
-  Measure a four-qubit state in the I⊗I⊗Z⊗I basis
-
-  Args:
-    qubit (NQubitState): Qubit state to measure
-    shots (int): Number of measurement shots
-
-  Returns:
-    float: Expectation value
-  """
-  qubit.swap_gate(1, 2)
-  qubit.swap_gate(0, 1)
-
-  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
-  return measurement_expectation(outcome, shots)
-
-
-def measure_iiiz(qubit: NQubitState, shots: int) -> float:
-  """
-  Measure a four-qubit state in the I⊗I⊗I⊗Z basis
-
-  Args:
-    qubit (NQubitState): Qubit state to measure
-    shots (int): Number of measurement shots
-
-  Returns:
-    float: Expectation value
-  """
-  qubit.swap_gate(2, 3)
-  qubit.swap_gate(1, 2)
-  qubit.swap_gate(0, 1)
-
-  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
-  return measurement_expectation(outcome, shots)
-
-
 def measure_zizi(qubit: NQubitState, shots: int) -> float:
   """
-  Measure a four-qubit state in the Z⊗Z⊗I⊗I basis
+  Measure a four-qubit state in the Z⊗I⊗Z⊗I basis
 
   Args:
     qubit (NQubitState): Qubit state to measure
@@ -279,16 +210,16 @@ def measure_zizi(qubit: NQubitState, shots: int) -> float:
   Returns:
     float: Expectation value
   """
-  qubit.swap_gate(1, 2)
+  qubit.swap_gate(0, 1)
   qubit.cnot_gate(1, 0)
 
   outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
   return measurement_expectation(outcome, shots)
 
 
-def measure_xxii(qubit: NQubitState, shots: int) -> float:
+def measure_xixi(qubit: NQubitState, shots: int) -> float:
   """
-  Measure a four-qubit state in the X⊗X⊗I⊗I basis
+  Measure a four-qubit state in the X⊗I⊗X⊗I basis
 
   Args:
     qubit (NQubitState): Qubit state to measure
@@ -297,9 +228,214 @@ def measure_xxii(qubit: NQubitState, shots: int) -> float:
   Returns:
     float: Expectation value
   """
+
   qubit.hadamard_gate(0)
-  qubit.hadamard_gate(1)
+  qubit.hadamard_gate(2)
+
+  qubit.swap_gate(0, 1)
   qubit.cnot_gate(1, 0)
+  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
+  return measurement_expectation(outcome, shots)
+
+
+def measure_xiix(qubit: NQubitState, shots: int) -> float:
+  """
+  Measure a four-qubit state in the X⊗I⊗I⊗X basis
+
+  Args:
+    qubit (NQubitState): Qubit state to measure
+    shots (int): Number of measurement shots
+
+  Returns:
+    float: Expectation value
+  """
+
+  qubit.hadamard_gate(0)
+  qubit.swap_gate(2, 3)
+  qubit.hadamard_gate(2)
+
+  qubit.swap_gate(0, 1)
+  qubit.cnot_gate(1, 0)
+  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
+  return measurement_expectation(outcome, shots)
+
+
+def measure_ixxi(qubit: NQubitState, shots: int) -> float:
+  """
+  Measure a four-qubit state in the I⊗X⊗X⊗I basis
+
+  Args:
+    qubit (NQubitState): Qubit state to measure
+    shots (int): Number of measurement shots
+
+  Returns:
+    float: Expectation value
+  """
+
+  qubit.swap_gate(0, 1)
+  qubit.hadamard_gate(0)
+  qubit.hadamard_gate(2)
+
+  qubit.swap_gate(0, 1)
+  qubit.cnot_gate(1, 0)
+  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
+  return measurement_expectation(outcome, shots)
+
+
+def measure_ixix(qubit: NQubitState, shots: int) -> float:
+  """
+  Measure a four-qubit state in the I⊗X⊗I⊗X basis
+
+  Args:
+    qubit (NQubitState): Qubit state to measure
+    shots (int): Number of measurement shots
+
+  Returns:
+    float: Expectation value
+  """
+
+  qubit.swap_gate(0, 1)
+  qubit.hadamard_gate(0)
+  qubit.hadamard_gate(2)
+
+  qubit.swap_gate(0, 1)
+  qubit.cnot_gate(1, 0)
+  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
+  return measurement_expectation(outcome, shots)
+
+
+def measure_iixx(qubit: NQubitState, shots: int) -> float:
+  """
+  Measure a four-qubit state in the I⊗I⊗X⊗X basis
+
+  Args:
+    qubit (NQubitState): Qubit state to measure
+    shots (int): Number of measurement shots
+
+  Returns:
+    float: Expectation value
+  """
+
+  qubit.hadamard_gate(2)
+  qubit.hadamard_gate(3)
+  qubit.swap_gate(0, 2)
+
+  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
+  return measurement_expectation(outcome, shots)
+
+
+def measure_yiyi(qubit: NQubitState, shots: int) -> float:
+  """
+  Measure a four-qubit state in the Y⊗I⊗Y⊗I basis
+
+  Args:
+    qubit (NQubitState): Qubit state to measure
+    shots (int): Number of measurement shots
+
+  Returns:
+    float: Expectation value
+  """
+
+  qubit.s_gate_dagger(0)
+  qubit.hadamard_gate(0)
+  qubit.s_gate_dagger(2)
+  qubit.hadamard_gate(2)
+
+  qubit.swap_gate(0, 1)
+  qubit.cnot_gate(1, 0)
+  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
+  return measurement_expectation(outcome, shots)
+
+
+def measure_yiiy(qubit: NQubitState, shots: int) -> float:
+  """
+  Measure a four-qubit state in the Y⊗I⊗I⊗Y basis
+
+  Args:
+    qubit (NQubitState): Qubit state to measure
+    shots (int): Number of measurement shots
+
+  Returns:
+    float: Expectation value
+  """
+
+  qubit.s_gate_dagger(0)
+  qubit.hadamard_gate(0)
+  qubit.swap_gate(2, 3)
+  qubit.s_gate_dagger(2)
+  qubit.hadamard_gate(2)
+
+  qubit.swap_gate(0, 1)
+  qubit.cnot_gate(1, 0)
+  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
+  return measurement_expectation(outcome, shots)
+
+
+def measure_iyyi(qubit: NQubitState, shots: int) -> float:
+  """
+  Measure a four-qubit state in the I⊗Y⊗Y⊗I basis
+
+  Args:
+    qubit (NQubitState): Qubit state to measure
+    shots (int): Number of measurement shots
+
+  Returns:
+    float: Expectation value
+  """
+
+  qubit.swap_gate(0, 1)
+  qubit.s_gate_dagger(0)
+  qubit.hadamard_gate(0)
+  qubit.s_gate_dagger(2)
+  qubit.hadamard_gate(2)
+
+  qubit.swap_gate(0, 1)
+  qubit.cnot_gate(1, 0)
+  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
+  return measurement_expectation(outcome, shots)
+
+
+def measure_iyiy(qubit: NQubitState, shots: int) -> float:
+  """
+  Measure a four-qubit state in the I⊗Y⊗I⊗Y basis
+
+  Args:
+    qubit (NQubitState): Qubit state to measure
+    shots (int): Number of measurement shots
+
+  Returns:
+    float: Expectation value
+  """
+
+  qubit.swap_gate(0, 1)
+  qubit.s_gate_dagger(0)
+  qubit.hadamard_gate(0)
+  qubit.s_gate_dagger(2)
+  qubit.hadamard_gate(2)
+
+  qubit.swap_gate(0, 1)
+  qubit.cnot_gate(1, 0)
+  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
+  return measurement_expectation(outcome, shots)
+
+
+def measure_iiyy(qubit: NQubitState, shots: int) -> float:
+  """
+  Measure a four-qubit state in the I⊗I⊗Y⊗Y basis
+
+  Args:
+    qubit (NQubitState): Qubit state to measure
+    shots (int): Number of measurement shots
+
+  Returns:
+    float: Expectation value
+  """
+
+  qubit.s_gate_dagger(2)
+  qubit.hadamard_gate(2)
+  qubit.s_gate_dagger(3)
+  qubit.hadamard_gate(3)
+  qubit.swap_gate(0, 2)
 
   outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
   return measurement_expectation(outcome, shots)
@@ -379,17 +515,25 @@ def scipy_vqe_energies(
   verbose: bool = False,
 ):
   """
-  Run VQE for multiple lambda values to find ground state energies.
+  Run VQE for multiple lambda values to find ground state energies using scipy.optimize.minimize.
 
   Args:
     angle_parameters (int): Number of angle parameters
     energy_fn (Callable): Energy expectation function
-    shots (int): Number of measurement shots per expectation calculation"
+    lambdas (np.ndarray): Array of lambda values to evaluate
+    shots (int): Number of measurement shots per expectation calculation
+    method (str): Optimization method, defaults to "Powell"
+    max_iterations (int): Maximum optimization iterations, defaults to 1000
+    tolerance (float): Optimization tolerance, defaults to 1e-5
+    verbose (bool): Whether to print optimization progress
+
+  Returns:
+    np.ndarray: Array of minimum energies
   """
   partial_energy_fn = partial(energy_fn, shots=shots)
 
   min_energies = np.zeros(len(lambdas))
-  for i, lmb in enumerate(lambdas):
+  for i, lmb in enumerate(tqdm(lambdas)):
     angles_0 = np.random.uniform(0, np.pi, angle_parameters)
     result = minimize(
       fun=partial_energy_fn,

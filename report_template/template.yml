@@ -53,6 +53,7 @@ packages:
   - braket
   - caption
   - datetime
+  - float
   - fontenc
   - geometry
   - graphicx

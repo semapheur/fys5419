@@ -1,0 +1,10 @@
+\documentclass[border=2px]{standalone}
+
+\usepackage{quantikz}
+
+\begin{document}
+\begin{quantikz}[wire types={q,q}]
+  \lstick{\ket{0}} & \gate{R_x (\theta)}\gategroup[2, steps=2, style={dashed,rounded corners,fill=blue!20},background]{\footnotesize{Prepare ansatz}} & \gate{R_y (\phi)} & \gategroup[2, steps=1, style={dashed,rounded corners,fill=red!20}, label style={label position=below, anchor=north, yshift=-0.2cm}, background]{\footnotesize{Rotate basis}} & \meter{}\gategroup[2, steps=1, style={dashed,rounded corners,fill=green!20},background]{\footnotesize{Measure}}  & \setwiretype{c}\rstick{\braket{\psi(\theta,\phi)|\hat{Z}|\psi(\theta,\phi)}} \\
+  \lstick{\ket{0}} & \gate{R_x (\theta)} & \gate{R_y (\phi)} & \gate{H} & \meter{} & \setwiretype{c}\rstick{\braket{\psi(\theta,\phi)|\hat{H}\hat{Z}|\psi(\theta,\phi)}}
+\end{quantikz}
+\end{document}
