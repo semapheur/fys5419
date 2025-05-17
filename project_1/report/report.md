@@ -184,7 +184,7 @@ $$
 \end{equation*}
 $$
 
-Geometrically, it generates a half-turn about the diagonal $(x + z)$-axis on the Bloch sphere. This can be expressed in terms of the rotation operator $\hat{R}_{\unitvec{n}} (\theta)$ about $\unitvec{n} = \frac{1}{\sqrt{2}} (1, 0, 1)$, which corresponding to the diagonal $(x + z)$-axis:
+Geometrically, it generates a half-turn about the diagonal $(x + z)$-axis on the Bloch sphere. This can be expressed in terms of the rotation operator $\hat{R}_{\unitvec{n}} (\theta)$ about $\unitvec{n} = \frac{1}{\sqrt{2}} (1, 0, 1)$, which corresponds to the diagonal $(x + z)$-axis:
 
 $$
 \begin{align*}
@@ -201,7 +201,7 @@ $$
 \end{equation*}
 $$
 
-The Hadamard gate transforms the $\hat{Z}$ basis $\set{\ket{0}, \ket{1}}$ to the $\hat{X}$ basis $\set{\ket{+}, \ket{-}}$:
+The Hadamard gate transforms the $\hat{Z}$-basis $\set{\ket{0}, \ket{1}}$ to the $\hat{X}$-basis $\set{\ket{+}, \ket{-}}$:
 
 $$
 \begin{align*}
@@ -230,7 +230,7 @@ qubit_h = apply_hadamard(qubit) # Returns |+> state: [0.70710678, 0.70710678]
 The general phase shift gate is given by
 
 $$
-\end{equation*}
+\begin{equation*}
   \hat{P}(\nu) := \ket{0}\bra{0} + e^{i\nu} \ket{1}\bra{1} = \hat{Z}^{\nu/\pi} = \begin{bmatrix} 1 & 0 \\ 0 & e^{i\nu} \end{bmatrix},
 \end{equation*}
 $$
@@ -422,7 +422,7 @@ where the parameters are defined as
 
 $$
 \begin{equation*}
-  \mathcal{E} = \frac{E_1 + E_2}{2},\quad \Omega =& \frac{E_1 - E_2}{2},\quad c =& \frac{V_{11} + V_{22}}{2},\quad \omega_z =& \frac{V_{11} - V_{22}}{2},\quad \omega_x =& V_{12}=V_{21}.
+  \mathcal{E} = \frac{E_1 + E_2}{2},\quad \Omega = \frac{E_1 - E_2}{2},\quad c = \frac{V_{11} + V_{22}}{2},\quad \omega_z = \frac{V_{11} - V_{22}}{2},\quad \omega_x = V_{12}=V_{21}.
 \end{equation*}
 $$
 

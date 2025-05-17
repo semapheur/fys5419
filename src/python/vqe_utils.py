@@ -7,7 +7,7 @@ import qiskit as qk
 from scipy.optimize import minimize
 from tqdm import tqdm
 
-from qubit import NQubitState
+from qubit import NQubitState, basis_state
 from optimize import minimize_energy, Optimizer
 
 
@@ -29,7 +29,7 @@ def prepare_ansatz(angles: NDArray[np.float64]) -> NQubitState:
   num_qubits = len(angles) // 2
 
   # Initialize the ansatz state
-  qubit = NQubitState(num_qubits)
+  qubit = basis_state(num_qubits, 0)
 
   # Apply rotation X and Y gates
   for i in range(num_qubits):

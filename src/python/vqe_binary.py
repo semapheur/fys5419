@@ -5,7 +5,7 @@ from numpy.typing import NDArray
 import qiskit_aer
 import qiskit as qk
 
-from qubit import NQubitState
+from qubit import NQubitState, basis_state
 from vqe_utils import (
   measure_z,
   measurement_expectation,
@@ -113,7 +113,7 @@ def exact_energies_and_entropies(lambdas: NDArray[np.float64]):
 
 def prepare_ansatz(angles: NDArray[np.float64]) -> NQubitState:
   theta_0, phi_0, theta_1, phi_1 = angles
-  qubit = NQubitState(2)
+  qubit = basis_state(2, 0)
   qubit.rotation_x_gate(theta_0, 0)
   qubit.rotation_y_gate(phi_0, 0)
   qubit.rotation_x_gate(theta_1, 1)
@@ -156,7 +156,7 @@ def energy_expectation(
       expectation_zz = future_zz.result()
       expectation_xx = future_xx.result()
     except Exception as e:
-      raise RuntimeError(f"Error in parallel measurement: {str(e)}")
+      raise RuntimeError(f"Error in parallel measurement: {e}")
 
   # Calculate expectation value
   exp_val = (

@@ -5,7 +5,7 @@ from numpy.typing import NDArray
 import qiskit_aer
 import qiskit as qk
 
-from qubit import NQubitState
+from qubit import NQubitState, basis_state
 from vqe_utils import measurement_expectation
 
 E_1 = 0
@@ -88,7 +88,7 @@ def prepare_ansatz(angles: NDArray[np.float64]):
     NQubitState: Single-qubit ansatz state
   """
   theta, phi = angles
-  qubit = NQubitState(1)
+  qubit = basis_state(1, 0)
   qubit.rotation_x_gate(theta, 0)
   qubit.rotation_y_gate(phi, 0)
   return qubit

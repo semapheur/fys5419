@@ -9,6 +9,7 @@ class QuantumCircuit:
   """
   Based on Hundt (2022) Quantum Computing for Programmers
   (https://doi.org/10.1017/9781009099974.004)
+  https://github.com/qcc4cp/qcc/
   """
 
   def __init__(self, name: str | None = None):

@@ -1,11 +1,13 @@
+from __future__ import annotations
 from collections import Counter
 from typing import Literal
 
 from numba import jit
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 from qiskit import QuantumCircuit
 
+from tensor import Tensor
 from typehints import PolarAngle, AzimuthalAngle
 
 BELL_STATES = [
@@ -17,7 +19,7 @@ BELL_STATES = [
 
 
 class Qubit:
-  """Represents a single qubit as a 2D complex vector:
+  """Class representing a single qubit as a 2D complex vector:
   |ψ⟩ = cos(θ/2)|0⟩ + e^(iφ)sin(θ/2)|1⟩
 
   Attributes:
@@ -57,11 +59,11 @@ class Qubit:
     Returns:
       Tuple of (theta, phi) in radians
     """
-    theta = 2 * np.arccos(np.abs(self.state[0]))
+    theta = 2.0 * np.arccos(np.abs(self.state[0]))
     if np.isclose(theta, 0) or np.isclose(theta, np.pi):
       phi = 0  # Convention: φ is undefined at poles, set to 0
     else:
-      phi = (np.angle(self.state[1]) - np.angle(self.state[0])) % (2 * np.pi)
+      phi = (np.angle(self.state[1]) - np.angle(self.state[0])) % (2.0 * np.pi)
     return theta, phi
 
   def get_probabilities(self) -> NDArray[np.float64]:
@@ -77,7 +79,7 @@ class Qubit:
 
     probabilities = self.get_probabilities()
     outcome = np.random.choice((0, 1), p=probabilities)
-    state = [1, 0] if outcome == 0 else [0, 1]
+    state = [1.0, 0.0] if outcome == 0 else [0.0, 1.0]
     self.state = np.array(state, dtype=np.complex128)
 
   def measure(self, shots: int) -> list[int]:
@@ -94,28 +96,28 @@ class Qubit:
 
   def x_gate(self):
     """Apply Pauli-X gate: Bit flip."""
-    x = np.array([[0, 1], [1, 0]])
+    x = np.array([[0.0, 1.0], [1.0, 0.0]])
     self.state = x @ self.state
 
   def y_gate(self):
     """Apply Pauli-Y gate."""
-    y = np.array([[0, -1j], [1j, 0]])
+    y = np.array([[0.0, -1.0j], [1.0j, 0.0]])
     self.state = y @ self.state
 
   def z_gate(self):
     """Apply Pauli-Z gate: Phase flip."""
-    z = np.array([[1, 0], [0, -1]])
+    z = np.array([[1.0, 0.0], [0.0, -1.0]])
     self.state = z @ self.state
 
   def dump_state(self, basis: Literal["x", "y", "z"] = "z", decimals: int = 3) -> str:
     """Return a string representation of the current qubit in the specified basis."""
     if basis == "x":
-      x = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
+      x = np.array([[1.0, 1.0], [1.0, -1.0]]) / np.sqrt(2)
       state = x @ self.state
       basis_states = ("|+⟩", "|-⟩")
 
     elif basis == "y":
-      y = np.array([[1, -1j], [1j, 1]]) / np.sqrt(2)
+      y = np.array([[1.0, -1.0j], [1.0j, 1.0]]) / np.sqrt(2)
       state = y @ self.state
       basis_states = ("|i⟩", "|-i⟩")
 
@@ -127,7 +129,7 @@ class Qubit:
 
   def hadamard_gate(self):
     """Apply Hadamard gate: Creates superposition."""
-    hadamard = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
+    hadamard = np.array([[1.0, 1.0], [1.0, -1.0]]) / np.sqrt(2)
     self.state = hadamard @ self.state
 
   def phase_gate(self, alpha: float):
@@ -137,12 +139,12 @@ class Qubit:
     Args:
       alpha (float): Phase angle in radians
     """
-    phase = np.array([[1, 0], [0, np.exp(1j * alpha)]])
+    phase = np.array([[1.0, 0.0], [0.0, np.exp(1.0j * alpha)]])
     self.state = phase @ self.state
 
   def s_gate(self):
     """Apply the S gate."""
-    s = np.array([[1, 0], [0, 1j]])
+    s = np.array([[1.0, 0.0], [0.0, 1.0j]])
     self.state = s @ self.state
 
   def bloch_str(self, decimals: int = 3) -> str:
@@ -163,11 +165,10 @@ class Qubit:
     return f"Qubit(state={self.state})"
 
 
-class NQubitState:
-  """Represents an n-qubit quantum system as a 2^n dimensional complex vector:
-  |ψ⟩ = Σ αᵢ|i⟩ where Σ|αᵢ|² = 1
+class NQubitState(Tensor):
+  """Represents an n-qubit state vector as a numpy array.
 
-  The basis states are indexed in binary order, e.g. for 3 qubits:
+  The computational basis states are indexed in binary order, e.g. for 3 qubits:
   |000⟩, |001⟩, |010⟩, |011⟩, |100⟩, |101⟩, |110⟩, |111⟩
 
   Attributes:
@@ -176,67 +177,73 @@ class NQubitState:
     state (NDArray[np.complex128]): The quantum state vector of dimension 2^n
   """
 
-  def __init__(
-    self,
-    num_qubits: int,
-    state: NDArray[np.complex128] | None = None,
-    basis_state: int | None = 0,
-  ):
+  def __new__(cls, vector: ArrayLike) -> NQubitState:
     """Initialize an n-qubit system.
 
     Args:
-      num_qubits (int): Number of qubits in the system
-      state (NDArray[np.complex128]|None): Optional initial state vector of dimension 2^n
-      basis_state (int|None): Optional computational basis state to initialize to (default |0...0⟩)
+      vector (NDArray[np.complex128]): Initial state vector of dimension 2^n
+
+    Returns:
+      NQubitState: Initialized n-qubit system
     """
 
-    self.num_qubits = num_qubits
-    self.dim = 2**num_qubits
+    array = np.asarray(vector, dtype=np.complex128, copy=True)
+    array = cls.validate_state(array)
 
-    if state is not None:
-      if state.shape != (self.dim,):
-        raise ValueError(f"State vector must be {self.dim}-dimensional")
-      self._validate_and_set_state(state)
+    return array.view(cls)
+
+  def __array_finalize__(self, obj):
+    if obj is None:
       return
-
-    # Initialize to specified basis state (default |0...0⟩)
-    state = np.zeros(self.dim, dtype=np.complex128)
-    state[basis_state] = 1.0
-    self._state = state
-
-  def copy(self) -> "NQubitState":
-    new_state = NQubitState(self.num_qubits, state=self.state.copy())
-    return new_state
-
-  def _validate_and_set_state(self, state: NDArray[np.complex128]):
-    """Validate and set the quantum state vector.
-
-    Args:
-      state (NDArray[np.complex128]): The quantum state vector to validate and set
-
-    Raises:
-      ValueError: If the state is not normalized
-    """
-    # Ensure complex type
-    state = state.astype(np.complex128)
-
-    # Check normalization
-    norm = np.linalg.norm(state)
-    if not np.isclose(norm, 1.0, rtol=1e-6):
-      raise ValueError(f"State vector not normalized. Norm: {norm}")
-
-    self._state = state
 
   @property
   def state(self) -> NDArray[np.complex128]:
-    return self._state
+    return self.view(np.ndarray)
 
   @state.setter
-  def state(self, state: NDArray[np.complex128]):
-    self._validate_and_set_state(state)
+  def state(self, new_state: NDArray[np.complex128]):
+    new_state = np.asarray(new_state.copy(), dtype=np.complex128)
+    if new_state.shape != self.shape:
+      raise ValueError(
+        f"State vector must have shape {self.shape}. Got {new_state.shape}"
+      )
+    norm = np.linalg.norm(new_state)
+    if not np.isclose(norm, 1.0, rtol=1e-6):
+      raise ValueError(f"State vector must be normalized. Norm = {norm}")
+    self[:] = new_state
+
+  @property
+  def dim(self) -> int:
+    return self.shape[0]
+
+  @staticmethod
+  def validate_state(
+    vector: NDArray[np.complex128], rtol: float = 1e-6
+  ) -> NDArray[np.complex128]:
+    if vector.ndim != 1:
+      raise ValueError(f"Qubit state must be 1D vector. Got {vector.shape}")
+
+    dim = vector.shape[0]
+    if dim == 0:
+      raise ValueError("State vector cannot be empty")
+
+    if (dim & (dim - 1)) != 0:
+      raise ValueError(f"State vector must be a power of 2. Got {dim}")
+
+    norm = np.linalg.norm(vector)
+    if not np.isclose(norm, 1.0, rtol=rtol):
+      raise ValueError(
+        f"State vector must be normalized. Got state vector with norm {norm}"
+      )
+
+    return vector
 
   def get_probabilities(self) -> NDArray[np.float64]:
-    return np.square(np.abs(self.state))
+    return np.square(np.abs(self))
+
+  def get_max_probability(self) -> tuple[int, float]:
+    probabilities = self.get_probabilities()
+    return np.argmax(probabilities).astype(int), np.max(probabilities).astype(float)
 
   def get_reduced_density_matrix(
     self, target_qubits: list[int]
@@ -251,7 +258,7 @@ class NQubitState:
     """
 
     # Convert state vector to density matrix
-    density_matrix = np.outer(self.state, np.conj(self.state))
+    density_matrix = np.outer(self, np.conj(self))
 
     # Reshape into tensor with 2^n dimensions
     tensor_shape = [2] * (2 * self.num_qubits)  # twice number of qubits for bra and ket
@@ -312,7 +319,7 @@ class NQubitState:
     # Generate measurement probabilities for each shot
     random_outcomes = np.random.random(size=(shots, len(targets)))
 
-    outcomes = _measure_shots(self.state.copy(), targets, random_outcomes, self.dim)
+    outcomes = _measure_shots(self.copy(), targets, random_outcomes, self.dim)
 
     result = [tuple(outcome) for outcome in outcomes]
     if not as_dict:
@@ -321,24 +328,24 @@ class NQubitState:
     outcome_strings = ["".join(map(str, outcome)) for outcome in result]
     return dict(sorted(Counter(outcome_strings).items()))
 
-  def apply_unary_gate(self, gate: NDArray[np.complex128], target: int):
-    """Apply a unary quantum gate to the specified qubit.
+  def apply_unary_gate(self, gate: np.ndarray, target: int):
+    # Reverse target index
+    target = self.num_qubits - target - 1
+    target_stride = 1 << target  # 2**target
 
-    Args:
-      gate (NDArray[np.complex128]): 2x2 unitary matrix representing the gate
-      target (int): Index of target qubit"""
+    # Gate elements
+    g00 = gate[0, 0]
+    g01 = gate[0, 1]
+    g10 = gate[1, 0]
+    g11 = gate[1, 1]
 
-    if gate.shape != (2, 2):
-      raise ValueError("Gate must be a 2x2 matrix")
-
-    # Construct full gate matrix using tensor products
-    full_gate = np.array([[1]], dtype=np.complex128)
-    for i in range(self.num_qubits):
-      full_gate = np.kron(full_gate, gate if i == target else np.eye(2)).astype(
-        np.complex128
-      )
-
-    self.state = full_gate @ self.state
+    target_block = 1 << (target + 1)  # 2**(target + 1)
+    for g in range(0, self.dim, target_block):
+      for i in range(g, g + target_stride):
+        t1 = g00 * self[i] + g01 * self[i + target_stride]
+        t2 = g10 * self[i] + g11 * self[i + target_stride]
+        self[i] = t1
+        self[i + target_stride] = t2
 
   def apply_controlled_gate(
     self, gate: NDArray[np.complex128], control: int, target: int
@@ -353,18 +360,38 @@ class NQubitState:
     if gate.shape != (2, 2):
       raise ValueError("Gate must be a 2x2 matrix")
 
-    # Initialize controlled gate
-    controlled_gate = np.eye(self.dim, dtype=np.complex128)
+    self_qubits = self.num_qubits
 
-    for i in range(self.dim):
-      if (i >> target) & 1:  # Apply gate if target qubit is 1
-        control_bit = (i >> control) & 1  # Get bit value of control qubit
-        i_modified = i ^ (1 << control)  # Index of flipped control qubit
+    if control < 0 or control >= self_qubits:
+      raise ValueError(f"Control index must be between 0 and {self_qubits - 1}")
 
-        controlled_gate[i, i] = gate[control_bit, control_bit]
-        controlled_gate[i, i_modified] = gate[control_bit, 1 - control_bit]
+    if target < 0 or target >= self_qubits:
+      raise ValueError(f"Target index must be between 0 and {self_qubits - 1}")
 
-    self.state = controlled_gate @ self.state
+    if control == target:
+      raise ValueError("Control and target qubits must be different")
+
+    # Reverse control and target indices
+    target = self_qubits - target - 1
+    target_stride = 1 << target  # 2**target
+    control = self_qubits - control - 1
+
+    # Gate elements
+    g00 = gate[0, 0]
+    g01 = gate[0, 1]
+    g10 = gate[1, 0]
+    g11 = gate[1, 1]
+
+    target_block = 1 << (target + 1)  # 2**(target + 1)
+    for g in range(0, self.dim, target_block):
+      index_base = g * self.dim
+      for i in range(g, g + target_stride):
+        index = index_base + i
+        if index & (1 << control):  # Apply gate if control qubit is 1
+          t1 = g00 * self[i] + g01 * self[i + target_stride]
+          t2 = g10 * self[i] + g11 * self[i + target_stride]
+          self[i] = t1
+          self[i + target_stride] = t2
 
   def hadamard_gate(self, target: int):
     """Apply a Hadamard gate to the specified qubit.
@@ -372,8 +399,8 @@ class NQubitState:
     Args:
       target (int): Index of target qubit"""
 
-    H = np.array([[1, 1], [1, -1]], dtype=np.complex128) / np.sqrt(2)
-    self.apply_unary_gate(H, target)
+    h = np.array([[1.0, 1.0], [1.0, -1.0]], dtype=np.complex128) / np.sqrt(2.0)
+    self.apply_unary_gate(h, target)
 
   def x_gate(self, target: int):
     """Apply a Pauli-X gate to the specified qubit.
@@ -381,7 +408,7 @@ class NQubitState:
     Args:
       target (int): Index of target qubit"""
 
-    x = np.array([[0, 1], [1, 0]], dtype=np.complex128)
+    x = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.complex128)
     self.apply_unary_gate(x, target)
 
   def y_gate(self, target: int):
@@ -391,7 +418,7 @@ class NQubitState:
     Args:
       target (int): Index of target qubit"""
 
-    y = np.array([[0, -1j], [1j, 0]])
+    y = np.array([[0.0, -1.0j], [1.0j, 0.0]])
     self.apply_unary_gate(y, target)
 
   def z_gate(self, target: int):
@@ -400,7 +427,7 @@ class NQubitState:
     Args:
       target (int): Index of target qubit"""
 
-    z = np.array([[1, 0], [0, -1]], dtype=np.complex128)
+    z = np.array([[1.0, 0.0], [0.0, -1.0]], dtype=np.complex128)
     self.apply_unary_gate(z, target)
 
   def rotation_x_gate(self, theta: float, target: int):
@@ -412,8 +439,8 @@ class NQubitState:
 
     R_x = np.array(
       [
-        [np.cos(theta / 2), -1j * np.sin(theta / 2)],
-        [-1j * np.sin(theta / 2), np.cos(theta / 2)],
+        [np.cos(theta / 2.0), -1.0j * np.sin(theta / 2.0)],
+        [-1.0j * np.sin(theta / 2.0), np.cos(theta / 2.0)],
       ]
     )
     self.apply_unary_gate(R_x, target)
@@ -426,7 +453,10 @@ class NQubitState:
       target (int): Index of target qubit"""
 
     R_y = np.array(
-      [[np.cos(theta / 2), -np.sin(theta / 2)], [np.sin(theta / 2), np.cos(theta / 2)]]
+      [
+        [np.cos(theta / 2.0), -np.sin(theta / 2.0)],
+        [np.sin(theta / 2.0), np.cos(theta / 2.0)],
+      ]
     )
     self.apply_unary_gate(R_y, target)
 
@@ -437,7 +467,9 @@ class NQubitState:
       theta (float): Rotation angle in radians
       target (int): Index of target qubit"""
 
-    R_z = np.array([[np.exp(-1j * theta / 2), 0], [0, np.exp(1j * theta / 2)]])
+    R_z = np.array(
+      [[np.exp(-1.0j * theta / 2.0), 0.0], [0.0, np.exp(1.0j * theta / 2.0)]]
+    )
     self.apply_unary_gate(R_z, target)
 
   def s_gate(self, target: int):
@@ -446,7 +478,7 @@ class NQubitState:
     Args:
       target (int): Index of target qubit"""
 
-    s = np.array([[1, 0], [0, 1j]], dtype=np.complex128)
+    s = np.array([[1.0, 0.0], [0.0, 1.0j]], dtype=np.complex128)
     self.apply_unary_gate(s, target)
 
   def s_gate_dagger(self, target: int):
@@ -455,7 +487,7 @@ class NQubitState:
     Args:
       target (int): Index of target qubit"""
 
-    s_dagger = np.array([[1, 0], [0, -1j]], dtype=np.complex128)
+    s_dagger = np.array([[1.0, 0.0], [0.0, -1.0j]], dtype=np.complex128)
     self.apply_unary_gate(s_dagger, target)
 
   def cnot_gate(self, control: int, target: int):
@@ -466,7 +498,7 @@ class NQubitState:
       control (int): Index of control qubit
       target (int): Index of target qubit"""
 
-    x = np.array([[0, 1], [1, 0]], dtype=np.complex128)
+    x = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.complex128)
     self.apply_controlled_gate(x, control, target)
 
   def swap_gate(self, qubit1: int, qubit2: int):
@@ -480,6 +512,13 @@ class NQubitState:
       ValueError: If qubit1 and qubit2 are the same
     """
 
+    self_qubits = self.num_qubits
+    if qubit1 < 0 or qubit1 >= self_qubits:
+      raise ValueError(f"Index of qubit1 must be between 0 and {self_qubits - 1}")
+
+    if qubit2 < 0 or qubit2 >= self_qubits:
+      raise ValueError(f"Index of qubit2 must be between 0 and {self_qubits - 1}")
+
     if qubit1 == qubit2:
       raise ValueError("Qubits must be different")
 
@@ -487,13 +526,39 @@ class NQubitState:
     self.cnot_gate(qubit2, qubit1)
     self.cnot_gate(qubit1, qubit2)
 
+  def controlled_phase_gate(self, control: int, target: int, phase: float):
+    """Apply a controlled phase gate.
+
+    Args:
+      control (int): Index of control qubit
+      target (int): Index of target qubit
+      phase (float): Phase angle in radians"""
+
+    p = np.array([[1.0, 0.0], [0.0, np.exp(1.0j * phase)]], dtype=np.complex128)
+    self.apply_controlled_gate(p, control, target)
+
+  def fourier_transform(self):
+    """Apply a Fourier transform to all qubits."""
+
+    n = self.num_qubits
+
+    for j in range(n):
+      self.hadamard_gate(j)
+
+      for k in range(j + 1, n):
+        phase = np.pi / (2 ** (k - j))
+        self.controlled_phase_gate(k, j, phase)
+
+    for j in range(n // 2):
+      self.swap_gate(j, n - j - 1)
+
   def dump_state(self, decimals: int = 3) -> str:
     """Print the current state in the computational basis."""
     terms = []
     for i in range(self.dim):
-      if abs(self.state[i]) > 1e-10:  # Ignore very small amplitudes
+      if abs(self[i]) > 1e-10:  # Ignore very small amplitudes
         basis = f"|{i:0{self.num_qubits}b}⟩"
-        terms.append(f"({self.state[i]:.{decimals}f}){basis}")
+        terms.append(f"({self[i]:.{decimals}f}){basis}")
 
     return " + ".join(terms)
 
@@ -562,6 +627,39 @@ def _measure_shots(
   return outcomes
 
 
+def basis_state(num_qubits: int, idx: int) -> NQubitState:
+  """Create a quantum state in the given basis state.
+
+  Args:
+    num_qubits (int): Number of qubits in the system
+    idx (int): Index of the basis state in binary order (0 to 2^n-1)
+
+  Returns:
+    NQubitState: Quantum state in the given basis state
+  """
+  dim = 1 << num_qubits  # 2**num_qubits
+
+  if idx < 0 or idx >= dim:
+    raise ValueError(f"Index must be between 0 and {dim - 1}. Got {idx}")
+
+  state = np.zeros(dim, dtype=np.complex128)
+  state[idx] = 1.0
+
+  return NQubitState(state)
+
+
+def random_qubit_state(dim: int) -> NDArray[np.complex128]:
+  """Create a random qubit state."""
+
+  if not (dim > 0 and (dim & (dim - 1)) == 0):
+    raise ValueError("Dimension must be a power of 2")
+
+  state = np.random.rand(dim) + 1.0j * np.random.rand(dim)
+  state /= np.linalg.norm(state)
+
+  return state
+
+
 def create_bell_state(state: Literal[0, 1, 2, 3]) -> NQubitState:
   """
   Create a qubit in a Bell state using Hadamard and CNOT gates.
@@ -574,9 +672,9 @@ def create_bell_state(state: Literal[0, 1, 2, 3]) -> NQubitState:
     - 3 initializes |11⟩ resulting in |Φ-⟩ = (1/√2)*(|01⟩ - |10⟩)
   """
 
-  bell_state = NQubitState(2, basis_state=state)
-  bell_state.hadamard_gate(0)  # Apply Hadamard gate to first qubit
-  bell_state.cnot_gate(0, 1)  # Apply CNOT gate
+  bell_state = basis_state(2, state)
+  bell_state.hadamard_gate(0)  # apply Hadamard gate to first qubit
+  bell_state.cnot_gate(0, 1)  # apply CNOT gate
 
   return bell_state
 
@@ -596,8 +694,8 @@ def bell_state_circuit(state: Literal[0, 1, 2, 3]) -> QuantumCircuit:
   qc = QuantumCircuit(2, 2)
   qc.initialize(f"{state:0{2}b}", [0, 1])
 
-  qc.h(0)  # Apply Hadamard gate to first qubit
-  qc.cx(0, 1)  # Apply CNOT gate
+  qc.h(0)  # apply Hadamard gate to first qubit
+  qc.cx(0, 1)  # apply CNOT gate
 
   return qc
 

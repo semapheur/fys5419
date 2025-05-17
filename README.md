@@ -1,5 +1,12 @@
 ### Tips
 
+#### Import from parent directories in Jupyter notebook
+
+```python
+import sys
+sys.path.insert(0, "/path/to/python/scripts")
+```
+
 #### Display Latex from Python code in Jupyter notebook
 
 ```python

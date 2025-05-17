@@ -1,16 +1,17 @@
-import operator
 from typing import Literal, cast
+
 import numpy as np
 
-import bitutils
-from bitutils import Bits
-import tensor
+from . import bitutils
+from .bitutils import Bits
+from . import tensor
 
 
 class State(tensor.Tensor):
   """Class representing qubit states
   Based on Hundt (2022) Quantum Computing for Programmers
   (https://doi.org/10.1017/9781009099974.004)
+  https://github.com/qcc4cp/qcc/
   """
 
   def __repr__(self) -> str:
@@ -62,39 +63,39 @@ class State(tensor.Tensor):
     """Return the density matrix of the state."""
     return tensor.Tensor(np.outer(self, self.conj()))
 
-  def apply_unary_gate(self, gate: operator.Operator, target: int):
+  def apply_unary_gate(self, gate: np.ndarray, target: int):
     target = self.num_bits - target - 1
-    pow_2_target = 1 << target
+    target_stride = 1 << target  # 2**target
     g00 = gate[0, 0]
     g01 = gate[0, 1]
     g10 = gate[1, 0]
     g11 = gate[1, 1]
 
     for g in range(0, 1 << self.num_bits, 1 << (target + 1)):
-      for i in range(g, g + pow_2_target):
-        t1 = g00 * self[i] + g01 * self[i + pow_2_target]
-        t2 = g10 * self[i] + g11 * self[i + pow_2_target]
+      for i in range(g, g + target_stride):
+        t1 = g00 * self[i] + g01 * self[i + target_stride]
+        t2 = g10 * self[i] + g11 * self[i + target_stride]
         self[i] = t1
-        self[i + pow_2_target] = t2
+        self[i + target_stride] = t2
 
-  def apply_controlled_gate(self, gate: operator.Operator, control: int, target: int):
-    qubit = self.num_bits - target - 1
-    pow_2_index = 2**qubit
+  def apply_controlled_gate(self, gate: np.ndarray, control: int, target: int):
+    target = self.num_bits - target - 1
+    target_stride = 1 << target  # 2**target
     control = self.num_bits - control - 1
     g00 = gate[0, 0]
     g01 = gate[0, 1]
     g10 = gate[1, 0]
     g11 = gate[1, 1]
 
-    for g in range(0, 1 << self.num_bits, 1 << (qubit + 1)):
+    for g in range(0, 1 << self.num_bits, 1 << (target + 1)):
       index_base = g * (1 << self.num_bits)
-      for i in range(g, g + pow_2_index):
+      for i in range(g, g + target_stride):
         index = index_base + i
         if index & (1 << control):
-          t1 = g00 * self[i] + g01 * self[i + pow_2_index]
-          t2 = g10 * self[i] + g11 * self[i + pow_2_index]
+          t1 = g00 * self[i] + g01 * self[i + target_stride]
+          t2 = g10 * self[i] + g11 * self[i + target_stride]
           self[i] = t1
-          self[i + pow_2_index] = t2
+          self[i + target_stride] = t2
 
   def dump_(
     self, description: str | None = None, probability_only: bool = True

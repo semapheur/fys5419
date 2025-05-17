@@ -1,33 +1,43 @@
+from __future__ import annotations
+from typing import cast
+
 import numpy as np
 
-import tensor
-import state
+from . import tensor
+from . import state
 
 
 class Operator(tensor.Tensor):
   """Opearator representation using numpy.
 
   Based on Hundt (2022) Quantum Computing for Programmers
-  (https://doi.org/10.1017/9781009099974.004)"""
+  (https://doi.org/10.1017/9781009099974.004)
+  https://github.com/qcc4cp/qcc/
+  """
 
-  def __call__(self, arg: "Operator" | state.State, idx: int = 0) -> state.State:
+  def __call__(
+    self, arg: state.State | Operator, idx: int = 0
+  ) -> state.State | Operator:
     return self.apply(arg, idx)
 
-  def apply(self, arg: "Operator" | state.State, idx: int) -> state.State:
+  def apply(self, arg: state.State | Operator, idx: int) -> state.State | Operator:
     """Apply operator to a state or operator."""
 
     if isinstance(arg, Operator):
+      self_bits = self.num_bits
       arg_bits = arg.num_bits
       if idx > 0:
         arg = Operator(identity_gate().kpow(idx) * arg)
 
-      if self.num_bits > arg_bits:
+      if self_bits > arg_bits:
         arg = Operator(arg * identity_gate().kpow(self.num_bits - idx - arg_bits))
 
-      if self.num_bits != arg.num_bits:
-        raise AssertionError("Operator dimensions must match")
+      if self_bits != arg_bits:
+        raise AssertionError(
+          f"Mismatched operator dimensions: {self_bits} != {arg_bits}"
+        )
 
-      return state.State(arg @ self)
+      return Operator(arg @ self)
 
     if not isinstance(arg, state.State):
       raise AssertionError("arg must be an instance of State")
@@ -38,7 +48,7 @@ class Operator(tensor.Tensor):
     if arg.num_bits - idx - self.num_bits > 0:
       op = Operator(op * identity_gate().kpow(arg.num_bits - idx - self.num_bits))
 
-    return state.State(np.matmul(self, arg))
+    return state.State(np.matmul(op, arg))
 
   def __repr__(self) -> str:
     o = "Operator("
@@ -49,7 +59,7 @@ class Operator(tensor.Tensor):
       f"Operator for {self.num_bits}-qubit state space. Tensor:\n{super().__str__()}"
     )
 
-  def adjoint(self) -> "Operator":
+  def adjoint(self) -> Operator:
     return Operator(np.conj(self.transpose()))
 
   def dump_(
@@ -158,7 +168,7 @@ def pauli_y_gate(num_bits: int = 1) -> Operator:
 
 
 def pauli_z_gate(num_bits: int = 1) -> Operator:
-  return Operator(Operator(np.array([[1.0, 0.0], (0.0, -1.0]])).kpow(num_bits))
+  return Operator(Operator(np.array([[1.0, 0.0], [0.0, -1.0]])).kpow(num_bits))
 
 
 _PAULI_X = pauli_x_gate()
@@ -253,8 +263,8 @@ def controlled_gate(control: int, target: int, op: Operator) -> Operator:
   if control == target:
     raise ValueError("Control and target qubits must be different")
 
-  p0 = projector_gate(state.zeros(1))
-  p1 = projector_gate(state.ones(1))
+  p0 = projector_gate(state.zeros(1))  # |0><0|
+  p1 = projector_gate(state.ones(1))  # |1><1|
 
   # space between qubits
   i_fill = identity_gate(abs(target - control) - 1)
@@ -291,3 +301,26 @@ def swap_gate(qubit1: int, qubit2: int) -> Operator:
   return Operator(
     cnot_gate(qubit2, qubit1) @ cnot_gate(qubit1, qubit2) @ cnot_gate(qubit2, qubit1)
   )
+
+
+def quantum_fourier_transform(num_bits: int) -> Operator:
+  qft = identity_gate(num_bits)
+  h = hadamard_gate()
+
+  for j in range(num_bits):
+    qft = cast(Operator, qft(h, j))
+
+    for k in range(2, num_bits - j + 1):
+      control = j + k - 1
+      qft = cast(Operator, qft(controlled_gate(control, j, discrete_phase_gate(k)), j))
+
+  for j in range(num_bits // 2):
+    qft = cast(Operator, qft(swap_gate(j, num_bits - j - 1), j))
+
+  assert qft.is_unitary()
+
+  return qft
+
+
+def inverse_quantum_fourier_transform(num_bits: int) -> Operator:
+  return quantum_fourier_transform(num_bits).adjoint()

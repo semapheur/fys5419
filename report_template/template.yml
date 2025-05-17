@@ -61,6 +61,7 @@ packages:
   - inputenc
   - listings
   - lmodern
+  - mathtools
   - natbib
   - siunitx
   - titlesec
