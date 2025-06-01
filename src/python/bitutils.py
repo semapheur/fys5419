@@ -5,6 +5,12 @@ type Bit = Literal[0, 1]
 type Bits = Sequence[Bit]
 
 
+def is_bitstring(s: str) -> bool:
+  """Check if a string is a bitstring."""
+
+  return all(c in "01" for c in s)
+
+
 def bits_to_decimal(bits: Bits) -> int:
   """Convert a list of bits to a decimal integer."""
 
@@ -17,10 +23,15 @@ def decimal_to_bits(val: int, nbits: int) -> Bits:
   return [cast(Bit, int(bit)) for bit in f"{val:0{nbits}b}"]
 
 
-def bits_to_binary_fraction(bits: Bits) -> float:
+def bits_to_fraction(bits: Bits) -> float:
   """Convert a list of bits to a binary fraction."""
 
-  return sum(bits[i] * 2 ** (-i - 1) for i in range(len(bits)))
+  result = 0.0
+  factor = 0.5
+  for bit in bits:
+    result += bit * factor
+    factor *= 0.5
+  return result
 
 
 def bit_product(num_bits: int) -> Iterable[Bits]:

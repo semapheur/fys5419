@@ -1,4 +1,4 @@
-### Tips
+# Tips
 
 #### Import from parent directories in Jupyter notebook
 

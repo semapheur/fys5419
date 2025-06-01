@@ -5,7 +5,7 @@ from numpy.typing import NDArray
 import qiskit_aer
 import qiskit as qk
 
-from qubit import NQubitState, basis_state
+from qubit import basis_state
 from vqe_utils import measurement_expectation
 
 E_1 = 0
@@ -89,8 +89,8 @@ def prepare_ansatz(angles: NDArray[np.float64]):
   """
   theta, phi = angles
   qubit = basis_state(1, 0)
-  qubit.rotation_x_gate(theta, 0)
-  qubit.rotation_y_gate(phi, 0)
+  qubit.rotation_x(theta, 0)
+  qubit.rotation_y(phi, 0)
   return qubit
 
 
@@ -120,7 +120,7 @@ def energy_expectation(
 
   # Measure in X-basis
   qubit = ansatz.copy()
-  qubit.hadamard_gate(0)  # Rotate to X-basis
+  qubit.hadamard(0)  # Rotate to X-basis
   outcomes = cast(dict[str, int], qubit.measure([0], shots))
   measure_x = measurement_expectation(outcomes, shots)
 

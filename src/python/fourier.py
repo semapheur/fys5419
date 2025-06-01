@@ -62,40 +62,26 @@ QFT3 = np.array(
 ) / np.sqrt(8)
 
 
-def qft_matrix(qubits: int) -> NDArray[np.complex128]:
+def qft_matrix(qubits: int, inverse: bool = False) -> NDArray[np.complex128]:
   """
   Generate the Quantum Fourier Transform (QFT) matrix for a given number of qubits.
 
   Args:
     qubits (int): Number of qubits.
+    inverse (bool): If True, returns the inverse QFT matrix.
 
   Returns:
     NDArray[np.complex128]: The QFT matrix of size 2^qubits x 2^qubits.
   """
   N = 1 << qubits  # 2**qubits
-  omega = np.exp(2j * np.pi / N)
+  power = 2.0j * np.pi / N
+
+  if inverse:
+    power = -power
+
+  omega = np.exp(power)
 
   # Use broadcasting to efficiently compute the QFT matrix
-  indices = np.arange(N)
-  matrix = omega ** np.outer(indices, indices)
-
-  return matrix / np.sqrt(N)
-
-
-def iqft_matrix(qubits: int) -> NDArray[np.complex128]:
-  """
-  Generate the Inverse Quantum Fourier Transform (IQFT) matrix for a given number of qubits.
-
-  Args:
-    qubits (int): Number of qubits.
-
-  Returns:
-    NDArray[np.complex128]: The IQFT matrix of size 2^qubits x 2^qubits.
-  """
-  N = 1 << qubits  # 2**qubit
-  omega = np.exp(-2j * np.pi / N)
-
-  # Use broadcasting to efficiently compute the IQFT matrix
   indices = np.arange(N)
   matrix = omega ** np.outer(indices, indices)
 

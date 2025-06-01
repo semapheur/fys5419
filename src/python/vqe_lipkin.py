@@ -25,7 +25,12 @@ from vqe_utils import (
 )
 
 
-def hamiltonian(N: int, eps: float, V: float, W: float) -> NDArray[np.float64]:
+def hamiltonian(
+  N: int,
+  eps: float,
+  W: float,
+  V: float,
+) -> NDArray[np.float64]:
   """
   Construct the Hamiltonian matrix for the Lipkin model.
 
@@ -76,7 +81,7 @@ def exact_energies(
   Returns:
     NDArray[np.float64]: 2D array of exact energies, sorted in ascending order for each interaction strength.
   """
-  return np.array([np.linalg.eigvalsh(hamiltonian(N, eps, v, W)) for v in V_array])
+  return np.array([np.linalg.eigvalsh(hamiltonian(N, eps, W, v)) for v in V_array])
 
 
 def energy_expectation_two_fermions(

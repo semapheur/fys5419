@@ -5,19 +5,25 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 from qubit import NQubitState
-from tensor import Tensor
+from tensor import Tensor, COMPLEX_DTYPE
 
 
 class Gate(Tensor):
   """
   A class for representing quantum gates as numpy arrays.
 
+  Based on Hundt (2022) Quantum Computing for Programmers
+  (https://doi.org/10.1017/9781009099974.004)
+  https://github.com/qcc4cp/qcc/
+
   Parameters:
     matrix (np.ndarray): The input array representing the quantum gate.
   """
 
-  def __new__(cls, matrix: ArrayLike) -> Gate:
-    obj = np.asarray(matrix, dtype=np.complex128, copy=True)
+  name: str
+
+  def __new__(cls, matrix: ArrayLike, name: str | None = None) -> Gate:
+    obj = np.asarray(matrix, dtype=COMPLEX_DTYPE, copy=True)
 
     if obj.ndim != 2:
       raise ValueError(f"Gate must be a 2D matrix. Got {obj.shape}")
@@ -29,7 +35,15 @@ class Gate(Tensor):
     if (dim & (dim - 1)) != 0:
       raise ValueError(f"Gate must be a power of 2. Got {dim}")
 
-    return obj.view(cls)
+    gate = obj.view(cls)
+    gate.name = name or "U"
+    return gate
+
+  def __array_finalize__(self, obj: np.ndarray | None):
+    if obj is None:
+      return
+
+    self.name = getattr(obj, "name", "U")
 
   def __matmul__(self, other) -> Gate | NQubitState:
     # Overload the @ operator
@@ -126,9 +140,13 @@ class Gate(Tensor):
   def dim(self) -> int:
     return self.shape[0]
 
-  def dagger(self):
+  def adjoint(self):
     """Return the Hermitian adjoint (complex transpose) of the gate."""
     return Gate(np.conj(np.transpose(self)))
+
+  def power(self, n: int) -> Gate:
+    """Return the n-th power of the gate."""
+    return Gate(np.linalg.matrix_power(self, n))
 
   def is_unitary(self, atol=1e-6) -> bool:
     """Check if a gate is unitary.
@@ -144,7 +162,7 @@ class Gate(Tensor):
 
 
 def identity_gate(num_qubits: int = 1) -> Gate:
-  return Gate(np.eye(1 << num_qubits, dtype=np.complex128))  # 2**num_qubits
+  return Gate(np.eye(1 << num_qubits, dtype=COMPLEX_DTYPE))  # 2**num_qubits
 
 
 def pauli_x_gate(num_qubits: int = 1) -> Gate:
@@ -152,13 +170,21 @@ def pauli_x_gate(num_qubits: int = 1) -> Gate:
 
 
 def hadamard_gate(num_qubits: int = 1) -> Gate:
-  h = np.array([[1.0, 1.0], [1.0, -1.0]], dtype=np.complex128) / np.sqrt(2.0)
+  h = np.array([[1.0, 1.0], [1.0, -1.0]], dtype=COMPLEX_DTYPE) / np.sqrt(2.0)
   return cast(Gate, Gate(h).kpow(num_qubits))
 
 
-def discrete_phase_gate(k: int, num_bits: int = 1) -> Gate:
-  p_k = np.array([[1.0, 0.0], [0.0, np.exp(2.0j * np.pi / 2**k)]])
-  return cast(Gate, Gate(p_k).kpow(num_bits))
+def phase_gate(phase: float, num_qubits: int = 1) -> Gate:
+  p = np.array([[1.0, 0.0], [0.0, np.exp(1.0j * phase)]])
+  return cast(Gate, Gate(p).kpow(num_qubits))
+
+
+def discrete_phase_gate(k: int, num_qubits: int = 1) -> Gate:
+  return phase_gate(2.0 * np.pi / 2**k, num_qubits)
+
+
+def inverse_discrete_phase_gate(k: int, num_qubits: int = 1) -> Gate:
+  return phase_gate(-2.0 * np.pi / 2**k, num_qubits)
 
 
 def controlled_gate(control: int, target: int, gate: Gate) -> Gate:
@@ -204,19 +230,52 @@ def swap_gate(qubit1: int, qubit2: int) -> Gate:
   )
 
 
-def fourier_transform(num_qubits: int) -> Gate:
+def flip_gate(gate: Gate) -> Gate:
+  """
+  Reverse the order of qubits in the input gate.
+
+  Args:
+    gate (Gate): The quantum gate to be flipped.
+
+  Returns:
+    Gate: A new gate with the qubits in reversed order.
+  """
+
+  qubits = gate.num_qubits
+  flipped_gate = gate.copy()
+  for j in range(qubits // 2):
+    flipped_gate = cast(Gate, flipped_gate(swap_gate(j, qubits - j - 1), j))
+
+  return flipped_gate
+
+
+def fourier_transform(num_qubits: int, inverse: bool = False) -> Gate:
+  """
+  Construct the quantum Fourier transform (QFT) gate for a given number of qubits.
+
+  Args:
+    num_qubits (int): The number of qubits the QFT gate acts on.
+    inverse (bool): If True, returns the inverse QFT gate.
+
+  Returns:
+    Gate: The quantum Fourier transform gate.
+  """
   qft = identity_gate(num_qubits)
   h = hadamard_gate()
 
   for j in range(num_qubits):
+    # Apply Hadamard gate
     qft = cast(Gate, qft(h, j))
 
+    # Apply controlled discrete phase gates
     for k in range(2, num_qubits - j + 1):
       control = j + k - 1
-      qft = cast(Gate, qft(controlled_gate(control, j, discrete_phase_gate(k)), j))
+      r_k = discrete_phase_gate(k) if not inverse else inverse_discrete_phase_gate(k)
 
-  for j in range(num_qubits // 2):
-    qft = cast(Gate, qft(swap_gate(j, num_qubits - j - 1), j))
+      qft = cast(Gate, qft(controlled_gate(control, j, r_k), j))
+
+  # Reverse qubit order
+  qft = flip_gate(qft)
 
   if not qft.is_unitary():
     raise ValueError("QFT gate is not unitary")
@@ -224,25 +283,50 @@ def fourier_transform(num_qubits: int) -> Gate:
   return qft
 
 
+def qft_dagger(num_qubits: int) -> Gate:
+  """
+  Construct the inverse quantum Fourier transform (QFT) gate for a given number of qubits
+  by taking the conjugate transpose of the QFT gate.
+
+  Args:
+    num_qubits (int): The number of qubits the IQFT gate acts on.
+
+  Returns:
+    Gate: The conjugate transpose of the QFT gate
+  """
+
+  return fourier_transform(num_qubits).adjoint()
+
+
 def inverse_fourier_transform(num_qubits: int) -> Gate:
-  return fourier_transform(num_qubits).dagger()
+  """
+  Construct the inverse quantum Fourier transform (QFT) gate for a given number of qubits.
 
+  Args:
+    num_qubits (int): The number of qubits the QFT gate acts on.
+    inverse (bool): If True, returns the inverse QFT gate.
 
-def inverse_fourier_transform_(num_qubits: int) -> Gate:
-  iqft = identity_gate(num_qubits)
+  Returns:
+    Gate: The inverse quantum Fourier transform gate.
+  """
+  qft = identity_gate(num_qubits)
   h = hadamard_gate()
 
-  for j in range(num_qubits // 2):
-    iqft = cast(Gate, iqft(swap_gate(j, num_qubits - j - 1), j))
+  # Reverse qubit order
+  qft = flip_gate(qft)
 
   for j in reversed(range(num_qubits)):
+    # Apply controlled discrete phase gates
     for k in reversed(range(2, num_qubits - j + 1)):
       control = j + k - 1
-      iqft = cast(Gate, iqft(controlled_gate(control, j, discrete_phase_gate(k)), j))
+      r_k = inverse_discrete_phase_gate(k)
 
-    iqft = cast(Gate, iqft(h, j))
+      qft = cast(Gate, qft(controlled_gate(control, j, r_k), j))
 
-  if not iqft.is_unitary():
+    # Apply Hadamard gate
+    qft = cast(Gate, qft(h, j))
+
+  if not qft.is_unitary():
     raise ValueError("IQFT gate is not unitary")
 
-  return iqft
+  return qft

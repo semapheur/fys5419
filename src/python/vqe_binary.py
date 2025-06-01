@@ -31,7 +31,7 @@ eps_iz = (eps_00 - eps_01 + eps_10 - eps_11) / 4.0
 eps_zz = (eps_00 - eps_01 - eps_10 + eps_11) / 4.0
 
 
-def hamiltonian(interaction_strength: float):
+def hamiltonian(interaction_strength: float) -> NDArray[np.float64]:
   """Construct the Hamiltonian matrix for a two-qubit quantum system."""
   H_I = H_z * np.kron(sigma_z, sigma_z) + H_x * np.kron(sigma_x, sigma_x)
   H_0 = np.diag([eps_00, eps_01, eps_10, eps_11])
@@ -114,11 +114,11 @@ def exact_energies_and_entropies(lambdas: NDArray[np.float64]):
 def prepare_ansatz(angles: NDArray[np.float64]) -> NQubitState:
   theta_0, phi_0, theta_1, phi_1 = angles
   qubit = basis_state(2, 0)
-  qubit.rotation_x_gate(theta_0, 0)
-  qubit.rotation_y_gate(phi_0, 0)
-  qubit.rotation_x_gate(theta_1, 1)
-  qubit.rotation_y_gate(phi_1, 1)
-  qubit.cnot_gate(0, 1)  # entangle qubits
+  qubit.rotation_x(theta_0, 0)
+  qubit.rotation_y(phi_0, 0)
+  qubit.rotation_x(theta_1, 1)
+  qubit.rotation_y(phi_1, 1)
+  qubit.cnot(0, 1)  # entangle qubits
 
   return qubit
 

@@ -4,16 +4,22 @@ from typing import cast
 import numpy as np
 from numpy.typing import ArrayLike
 
+COMPLEX_DTYPE = np.complex128
+
 
 class Tensor(np.ndarray):
   """A class for representing tensors as numpy arrays.
+
+  Based on Hundt (2022) Quantum Computing for Programmers
+  (https://doi.org/10.1017/9781009099974.004)
+  https://github.com/qcc4cp/qcc/
 
   Attributes:
     num_qubits (int): The number of qubits in the tensor.
   """
 
   def __new__(cls, array: ArrayLike) -> Tensor:
-    return np.asarray(array, dtype=np.complex128, copy=True).view(cls)
+    return np.asarray(array, dtype=COMPLEX_DTYPE, copy=True).view(cls)
 
   def __array_finalize__(self, obj: np.ndarray | None):
     if obj is None:

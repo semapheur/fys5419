@@ -35,15 +35,15 @@ def prepare_ansatz(angles: NDArray[np.float64]) -> NQubitState:
   for i in range(num_qubits):
     theta_i = angles[2 * i]
     phi_i = angles[2 * i + 1]
-    qubit.rotation_x_gate(theta_i, i)
-    qubit.rotation_y_gate(phi_i, i)
+    qubit.rotation_x(theta_i, i)
+    qubit.rotation_y(phi_i, i)
 
   if num_qubits == 1:  # Special case for single qubit
     return qubit
 
   # Apply CNOT gates to entangle adjacent qubits
   for i in range(num_qubits - 1):
-    qubit.cnot_gate(i, i + 1)
+    qubit.cnot(i, i + 1)
 
   return qubit
 
@@ -136,7 +136,7 @@ def measure_nth_z(qubit: NQubitState, z_index: int, shots: int) -> float:
   if z_index >= qubit.num_qubits:
     raise ValueError("Qubit index out of range")
 
-  qubit.swap_gate(0, z_index)
+  qubit.swap(0, z_index)
 
   outcome = cast(dict[str, int], qubit.measure(list(range(qubit.num_qubits)), shots))
   return measurement_expectation(outcome, shots)
@@ -153,7 +153,7 @@ def measure_zz(qubit: NQubitState, shots: int) -> float:
   Returns:
     float: Expectation value
   """
-  qubit.cnot_gate(1, 0)
+  qubit.cnot(1, 0)
 
   outcome = cast(dict[str, int], qubit.measure(list(range(qubit.num_qubits)), shots))
   return measurement_expectation(outcome, shots)
@@ -170,9 +170,9 @@ def measure_xx(qubit: NQubitState, shots: int) -> float:
   Returns:
     float: Expectation value
   """
-  qubit.hadamard_gate(0)
-  qubit.hadamard_gate(1)
-  qubit.cnot_gate(1, 0)
+  qubit.hadamard(0)
+  qubit.hadamard(1)
+  qubit.cnot(1, 0)
 
   outcome = cast(dict[str, int], qubit.measure(list(range(qubit.num_qubits)), shots))
   return measurement_expectation(outcome, shots)
@@ -189,11 +189,11 @@ def measure_yy(qubit: NQubitState, shots: int) -> float:
   Returns:
     float: Expectation value
   """
-  qubit.s_gate_dagger(0)
-  qubit.hadamard_gate(0)
-  qubit.s_gate_dagger(1)
-  qubit.hadamard_gate(1)
-  qubit.cnot_gate(1, 0)
+  qubit.s_dagger(0)
+  qubit.hadamard(0)
+  qubit.s_dagger(1)
+  qubit.hadamard(1)
+  qubit.cnot(1, 0)
 
   outcome = cast(dict[str, int], qubit.measure(list(range(qubit.num_qubits)), shots))
   return measurement_expectation(outcome, shots)
@@ -210,8 +210,8 @@ def measure_zizi(qubit: NQubitState, shots: int) -> float:
   Returns:
     float: Expectation value
   """
-  qubit.swap_gate(0, 1)
-  qubit.cnot_gate(1, 0)
+  qubit.swap(0, 1)
+  qubit.cnot(1, 0)
 
   outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
   return measurement_expectation(outcome, shots)
@@ -229,11 +229,11 @@ def measure_xixi(qubit: NQubitState, shots: int) -> float:
     float: Expectation value
   """
 
-  qubit.hadamard_gate(0)
-  qubit.hadamard_gate(2)
+  qubit.hadamard(0)
+  qubit.hadamard(2)
 
-  qubit.swap_gate(0, 1)
-  qubit.cnot_gate(1, 0)
+  qubit.swap(0, 1)
+  qubit.cnot(1, 0)
   outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
   return measurement_expectation(outcome, shots)
 
@@ -250,12 +250,12 @@ def measure_xiix(qubit: NQubitState, shots: int) -> float:
     float: Expectation value
   """
 
-  qubit.hadamard_gate(0)
-  qubit.swap_gate(2, 3)
-  qubit.hadamard_gate(2)
+  qubit.hadamard(0)
+  qubit.swap(2, 3)
+  qubit.hadamard(2)
 
-  qubit.swap_gate(0, 1)
-  qubit.cnot_gate(1, 0)
+  qubit.swap(0, 1)
+  qubit.cnot(1, 0)
   outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
   return measurement_expectation(outcome, shots)
 
@@ -272,12 +272,12 @@ def measure_ixxi(qubit: NQubitState, shots: int) -> float:
     float: Expectation value
   """
 
-  qubit.swap_gate(0, 1)
-  qubit.hadamard_gate(0)
-  qubit.hadamard_gate(2)
+  qubit.swap(0, 1)
+  qubit.hadamard(0)
+  qubit.hadamard(2)
 
-  qubit.swap_gate(0, 1)
-  qubit.cnot_gate(1, 0)
+  qubit.swap(0, 1)
+  qubit.cnot(1, 0)
   outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
   return measurement_expectation(outcome, shots)
 
@@ -294,12 +294,12 @@ def measure_ixix(qubit: NQubitState, shots: int) -> float:
     float: Expectation value
   """
 
-  qubit.swap_gate(0, 1)
-  qubit.hadamard_gate(0)
-  qubit.hadamard_gate(2)
+  qubit.swap(0, 1)
+  qubit.hadamard(0)
+  qubit.hadamard(2)
 
-  qubit.swap_gate(0, 1)
-  qubit.cnot_gate(1, 0)
+  qubit.swap(0, 1)
+  qubit.cnot(1, 0)
   outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
   return measurement_expectation(outcome, shots)
 
@@ -316,9 +316,9 @@ def measure_iixx(qubit: NQubitState, shots: int) -> float:
     float: Expectation value
   """
 
-  qubit.hadamard_gate(2)
-  qubit.hadamard_gate(3)
-  qubit.swap_gate(0, 2)
+  qubit.hadamard(2)
+  qubit.hadamard(3)
+  qubit.swap(0, 2)
 
   outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
   return measurement_expectation(outcome, shots)
@@ -336,13 +336,13 @@ def measure_yiyi(qubit: NQubitState, shots: int) -> float:
     float: Expectation value
   """
 
-  qubit.s_gate_dagger(0)
-  qubit.hadamard_gate(0)
-  qubit.s_gate_dagger(2)
-  qubit.hadamard_gate(2)
+  qubit.s_dagger(0)
+  qubit.hadamard(0)
+  qubit.s_dagger(2)
+  qubit.hadamard(2)
 
-  qubit.swap_gate(0, 1)
-  qubit.cnot_gate(1, 0)
+  qubit.swap(0, 1)
+  qubit.cnot(1, 0)
   outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
   return measurement_expectation(outcome, shots)
 
@@ -359,14 +359,14 @@ def measure_yiiy(qubit: NQubitState, shots: int) -> float:
     float: Expectation value
   """
 
-  qubit.s_gate_dagger(0)
-  qubit.hadamard_gate(0)
-  qubit.swap_gate(2, 3)
-  qubit.s_gate_dagger(2)
-  qubit.hadamard_gate(2)
+  qubit.s_dagger(0)
+  qubit.hadamard(0)
+  qubit.swap(2, 3)
+  qubit.s_dagger(2)
+  qubit.hadamard(2)
 
-  qubit.swap_gate(0, 1)
-  qubit.cnot_gate(1, 0)
+  qubit.swap(0, 1)
+  qubit.cnot(1, 0)
   outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
   return measurement_expectation(outcome, shots)
 
@@ -383,14 +383,14 @@ def measure_iyyi(qubit: NQubitState, shots: int) -> float:
     float: Expectation value
   """
 
-  qubit.swap_gate(0, 1)
-  qubit.s_gate_dagger(0)
-  qubit.hadamard_gate(0)
-  qubit.s_gate_dagger(2)
-  qubit.hadamard_gate(2)
+  qubit.swap(0, 1)
+  qubit.s_dagger(0)
+  qubit.hadamard(0)
+  qubit.s_dagger(2)
+  qubit.hadamard(2)
 
-  qubit.swap_gate(0, 1)
-  qubit.cnot_gate(1, 0)
+  qubit.swap(0, 1)
+  qubit.cnot(1, 0)
   outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
   return measurement_expectation(outcome, shots)
 
@@ -407,14 +407,14 @@ def measure_iyiy(qubit: NQubitState, shots: int) -> float:
     float: Expectation value
   """
 
-  qubit.swap_gate(0, 1)
-  qubit.s_gate_dagger(0)
-  qubit.hadamard_gate(0)
-  qubit.s_gate_dagger(2)
-  qubit.hadamard_gate(2)
+  qubit.swap(0, 1)
+  qubit.s_dagger(0)
+  qubit.hadamard(0)
+  qubit.s_dagger(2)
+  qubit.hadamard(2)
 
-  qubit.swap_gate(0, 1)
-  qubit.cnot_gate(1, 0)
+  qubit.swap(0, 1)
+  qubit.cnot(1, 0)
   outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
   return measurement_expectation(outcome, shots)
 
@@ -431,11 +431,11 @@ def measure_iiyy(qubit: NQubitState, shots: int) -> float:
     float: Expectation value
   """
 
-  qubit.s_gate_dagger(2)
-  qubit.hadamard_gate(2)
-  qubit.s_gate_dagger(3)
-  qubit.hadamard_gate(3)
-  qubit.swap_gate(0, 2)
+  qubit.s_dagger(2)
+  qubit.hadamard(2)
+  qubit.s_dagger(3)
+  qubit.hadamard(3)
+  qubit.swap(0, 2)
 
   outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
   return measurement_expectation(outcome, shots)

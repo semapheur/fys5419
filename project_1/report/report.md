@@ -537,7 +537,7 @@ $$
     \epsilon_{00} + H_z & 0 & 0 & H_x \\
     0 & \epsilon_{01} - H_z & H_x & 0 \\
     0 & H_x & \epsilon_{10} - H_z & 0 \\
-    H_x & 0 & 0 & \epsilon_{11} + H_z   
+    H_x & 0 & 0 & \epsilon_{11} + H_z
   \end{bmatrix}
 \end{align*}
 $$
