@@ -413,7 +413,7 @@ class QuantumCircuit:
     for i in range(len(register) // 2):
       self.swap(register[i], register[len(register) - 1 - i])
 
-  def qft(self, register: QubitRegister, inverse: bool = False):
+  def qft(self, register: QubitRegister, inverse: bool = False, flip: bool = True):
     for j in range(len(register)):
       self.h(register[j])
       for k in range(j + 1, len(register)):
@@ -424,4 +424,5 @@ class QuantumCircuit:
 
         self.cp(register[k], register[j], phase)
 
-    self.flip(register)
+    if flip:
+      self.flip(register)

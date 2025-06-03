@@ -1,6 +1,9 @@
 import math
 import random
 
+from circuit import QuantumCircuit
+from qubit import QubitRegister
+
 
 def is_prime(x: int) -> bool:
   """Check if x is a prime number."""
@@ -100,6 +103,165 @@ def multiplicative_order(n: int, modulus: int) -> int:
       raise ValueError(f"Order is greater than modulus: {order} > {modulus}")
 
   return order
+
+
+def modular_inverse(a: int, m: int) -> int:
+  """Modular inverse of a mod m is the number a^{-1} such that a * a^{-1} = 1 mod m."""
+
+  def extended_euclidean_algorithm(a: int, b: int) -> tuple[int, int, int]:
+    if a == 0:
+      return b, 0, 1
+
+    gcd, y, x = extended_euclidean_algorithm(b % a, a)
+    return gcd, x - (b // a) * y, y
+
+  gcd, x, _ = extended_euclidean_algorithm(a, m)
+
+  if gcd != 1:
+    raise ValueError(f"Modular inverse does not exist: {a} and {m} are not coprime")
+
+  return x % m
+
+
+def precompute_angles(a: int, n: int) -> list[float]:
+  s = bin(a)[2:].zfill(n)
+
+  angles = [0.0] * n
+  for i in range(n):
+    for j in range(i, n):
+      if s[j] == "1":
+        angles[n - i - 1] += 2 ** (-(j - i))
+
+    angles[n - i - 1] *= math.pi
+
+  return angles
+
+
+def add_fourier(
+  qc: QuantumCircuit,
+  reg: QubitRegister,
+  a: int,
+  n: int,
+  factor: float,
+):
+  """Add in Fourier space"""
+
+  angles = precompute_angles(a, n)
+  for i in range(n):
+    qc.p(reg[i], factor * angles[i])
+
+
+def cadd_fourier(
+  qc: QuantumCircuit,
+  reg: QubitRegister,
+  control: int,
+  a: int,
+  n: int,
+  factor: float,
+):
+  """Controlled add in Fourier space"""
+
+  angles = precompute_angles(a, n)
+  for i in range(n):
+    qc.cp(control, reg[i], factor * angles[i])
+
+
+def ccadd_fourier(
+  qc: QuantumCircuit,
+  reg: QubitRegister,
+  control1: int,
+  control2: int,
+  a: int,
+  n: int,
+  factor: float,
+):
+  """Double-controlled add in Fourier space"""
+
+  angles = precompute_angles(a, n)
+  for i in range(n):
+    qc.ccp(control1, control2, reg[i], factor * angles[i])
+
+
+def ccadd_mod(
+  qc: QuantumCircuit,
+  reg: QubitRegister,
+  control1: int,
+  control2: int,
+  aux: int,
+  a: int,
+  number: int,
+  n: int,
+):
+  """Double-controlled modular addition"""
+
+  ccadd_fourier(qc, reg, control1, control2, a, n, factor=1.0)
+  add_fourier(qc, reg, a, n, factor=-1.0)
+  qc.qft(reg, inverse=True, flip=False)
+  qc.cx(reg[n - 1], aux)
+  qc.qft(reg, inverse=False, flip=False)
+  cadd_fourier(qc, reg, aux, number, n, factor=1.0)
+
+  ccadd_fourier(qc, reg, control1, control2, a, n, factor=-1.0)
+  qc.qft(reg, inverse=True, flip=False)
+  qc.x(reg[n - 1])
+  qc.cx(reg[n - 1], aux)
+  qc.x(reg[n - 1])
+  qc.qft(reg, inverse=False, flip=False)
+  ccadd_fourier(qc, reg, control1, control2, a, n, factor=1.0)
+
+
+def ccadd_mod_inverse(
+  qc: QuantumCircuit,
+  reg: QubitRegister,
+  control1: int,
+  control2: int,
+  aux: int,
+  a: int,
+  number: int,
+  n: int,
+):
+  ccadd_fourier(qc, reg, control1, control2, a, n, factor=-1.0)
+  qc.qft(reg, inverse=True, flip=False)
+  qc.x(reg[n - 1])
+  qc.cx(reg[n - 1], aux)
+  qc.x(reg[n - 1])
+  qc.qft(reg, inverse=False, flip=False)
+  ccadd_fourier(qc, reg, control1, control2, a, n, factor=1.0)
+
+  cadd_fourier(qc, reg, aux, number, n, factor=-1.0)
+  qc.qft(reg, inverse=True, flip=False)
+  qc.cx(reg[n - 1], aux)
+  add_fourier(qc, reg, number, n, factor=1.0)
+  ccadd_fourier(qc, reg, control1, control2, a, n, factor=-1.0)
+
+
+def cmul_mod(
+  qc: QuantumCircuit,
+  control: int,
+  reg: QubitRegister,
+  aux: QubitRegister,
+  a: int,
+  number: int,
+  n: int,
+):
+  qc.qft(aux, flip=False)
+  for i in range(n):
+    ccadd_mod(
+      qc, aux, reg[i], control, aux[n + 1], (1 << i) * a % number, number, n + 1
+    )
+  qc.qft(reg, inverse=True, flip=False)
+
+  for i in range(n):
+    qc.cswap(control, reg[i], aux[i])
+  a_inv = modular_inverse(a, number)
+
+  qc.qft(aux, inverse=False, flip=False)
+  for i in range(n - 1, -1, -1):
+    ccadd_mod_inverse(
+      qc, aux, reg[i], control, aux[n + 1], (1 << i) * a_inv % number, number, n + 1
+    )
+
+  qc.qft(aux, inverse=True, flip=False)
 
 
 def classic_shor(n: int, max_attempts: int = 100) -> tuple[int, int]:

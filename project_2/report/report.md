@@ -1,5 +1,6 @@
 ---
-title: FYS5419 - Project 2
+title: Quantum Phase Estimation of Energy Eigenvalues
+subtitle: FYS5419 - Project 2
 authors:
   - name: Insert Name
 site:
@@ -665,13 +666,13 @@ A key limitation of QPE is that number of controlled unitary operations required
 :label: table:qpe-vqe-comparison
 :align: center
 
-| Feature | QPE | VQE |
-| -- | -- | -- |
-| **Target eigenvalues** | Ground and excited states | Ground states only |
-| **Input requirements** | Approximate eigenstate | Parametrised ansatz statae |
-| **Hamiltonian compatibility** | Requires embedding into a $2^n$-dimensional Hilbert space | Must be decomposable into Pauli strings |
-| **Precision scaling**| $O(1/\epsilon)$ gate complexity | $O(1/\epsilon^2)$ measurement complexity |
-| **Classical post-processing**| Minor (bitstring decoding) | Requires iterative optimisation |
+| Feature                       | QPE                                                       | VQE                                      |
+| ----------------------------- | --------------------------------------------------------- | ---------------------------------------- |
+| **Target eigenvalues**        | Ground and excited states                                 | Ground states only                       |
+| **Input requirements**        | Approximate eigenstate                                    | Parametrised ansatz statae               |
+| **Hamiltonian compatibility** | Requires embedding into a $2^n$-dimensional Hilbert space | Must be decomposable into Pauli strings  |
+| **Precision scaling**         | $O(1/\epsilon)$ gate complexity                           | $O(1/\epsilon^2)$ measurement complexity |
+| **Classical post-processing** | Minor (bitstring decoding)                                | Requires iterative optimisation          |
 :::
 
 # Conclusion
