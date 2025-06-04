@@ -8,7 +8,7 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from qiskit import QuantumCircuit
 
-from bitutils import bits_to_decimal
+from bitutils import bits_to_decimal, Bits
 from tensor import Tensor, COMPLEX_DTYPE
 from typehints import PolarAngle, AzimuthalAngle
 
@@ -244,6 +244,17 @@ class NQubitState(Tensor):
 
     return vector
 
+  def amplitude(self, bits: Bits) -> np.complexfloating:
+    """Get the amplitude of a given bitstring."""
+
+    return self[bits_to_decimal(bits)]
+
+  def get_probability(self, bits: Bits) -> float:
+    """Get the probability of a given bitstring."""
+
+    amplitude = self.amplitude(bits)
+    return np.real(amplitude * np.conj(amplitude))
+
   def get_probabilities(
     self, register: QubitRegister | list[int] | None = None
   ) -> NDArray[np.float64]:
@@ -257,7 +268,7 @@ class NQubitState(Tensor):
     """
 
     if register is None:
-      return np.square(np.abs(self))
+      return np.real(self.conj() * self)
 
     num_qubits = self.num_qubits
     for q in register:

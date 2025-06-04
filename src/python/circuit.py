@@ -426,3 +426,9 @@ class QuantumCircuit:
 
     if flip:
       self.flip(register)
+
+  def stats(self) -> str:
+    return f"""Circuit statistics
+      Qubits: {self.num_qubits}
+      Gates: {self.ir.num_nodes}        
+    """

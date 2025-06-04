@@ -1,8 +1,10 @@
+import fractions
 import math
 import random
 
+from bitutils import bits_to_decimal, bits_to_fraction, bit_product
 from circuit import QuantumCircuit
-from qubit import QubitRegister
+from qubit import QubitRegister, basis_state
 
 
 def is_prime(x: int) -> bool:
@@ -262,6 +264,55 @@ def cmul_mod(
     )
 
   qc.qft(aux, inverse=True, flip=False)
+
+
+def order_finding(a: int, n: int) -> tuple[int, int]:
+  """Run Shor's algorithm for order finding.
+
+  Args
+  a (int): The base of the exponentiation.
+  n (int): The modulus.
+
+  Returns
+  tuple[int, int]: A tuple (r1, r2) such that r1 and r2 are both candidates for the order of a modulo n.
+  """
+
+  n_bits = n.bit_length()
+
+  qc = QuantumCircuit("order_finding")
+  aux = qc.add_register(basis_state(n_bits + 2, n_bits + 2), name="q0")
+  up = qc.add_register(basis_state(n_bits * 2, n_bits * 2), name="q1")
+  down = qc.add_register(basis_state(n_bits, n_bits), name="q2")
+
+  _ = modular_inverse(a, n)
+
+  qc.h(up)
+  qc.x(down[0])
+  for i in range(n_bits * 2):
+    cmul_mod(qc, up[i], down, aux, int(a ** (2**i)), n, n_bits)
+
+  qc.qft(up, inverse=True, flip=True)
+  qc.qft(down, inverse=True, flip=False)
+
+  total_prob = 0.0
+  for bits in bit_product(n_bits * 4 + 2):
+    prob = qc.state.get_probability(bits)
+    if prob > 0.1:
+      bitslice = bits[n_bits + 2 : n_bits + 2 + n_bits * 2][::-1]
+      decimal = bits_to_decimal(bitslice)
+      phase = bits_to_fraction(bitslice)
+
+      r = fractions.Fraction(phase).limit_denominator(8).denominator
+      guesses = (math.gcd(a ** (r // 2) - 1, n), math.gcd(a ** (r // 2) + 1, n))
+      print(f"Final x: {decimal}, phase: {phase}, prob: {prob}, guesses: {guesses}")
+
+    total_prob += prob
+    if total_prob > 0.999:
+      break
+
+    print(qc.stats())
+
+  return guesses
 
 
 def classic_shor(n: int, max_attempts: int = 100) -> tuple[int, int]:
