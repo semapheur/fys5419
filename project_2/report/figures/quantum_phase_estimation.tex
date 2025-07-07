@@ -1,0 +1,16 @@
+\documentclass[tikz, border=5pt]{standalone}
+\usepackage{quantikz}
+
+\begin{document}
+\begin{quantikz}[wire types={q,n,n,n,q,n,q,n,q}]
+  \lstick[7]{$\ket{0}^{\otimes n}$} & \lstick{\ket{0}} \wireoverride{n} & \gate{H} &&& \ \ldots\ & \ctrl{8} & \ \frac{1}{\sqrt{2}}\left(\ket{0} + e^{i2\pi (2^{n-1} \phi)}\ket{1}\right) \ & \gate[7]{F^\dagger} & \meter{} \\[-0.2cm]
+  & \lstick{\otimes} &&&&&&&& \\[-0.4cm]
+  & \lstick{\vdots} &&&&&& \vdots && \\[-0.2cm]
+  & \lstick{\otimes} &&&&&&&& \\[-0.2cm]
+  & \lstick{\ket{0}} \wireoverride{n} & \gate{H} && \ctrl{4} & \ \ldots\ && \ \frac{1}{\sqrt{2}}\left(\ket{0} + e^{i2\pi (2^1 \phi)}\ket{1}\right) \ && \meter{} \\[-0.2cm]
+  & \lstick{\otimes} &&&&&&&& \\[-0.2cm]
+  & \lstick{\ket{0}} \wireoverride{n} & \gate{H} & \ctrl{2} && \ \ldots\ && \ \frac{1}{\sqrt{2}}\left(\ket{0} + e^{i2\pi (2^0 \phi)}\ket{1}\right) \ && \meter{} \\
+  & \lstick{\otimes} &&&&&&& \\
+  & \lstick{\ket{u}} \wireoverride{n} & \qwbundle{m}& \gate{U^{2^0}} & \gate{U^{2^1}} & \ \ldots\ & \gate{U^{2^{n-1}}} & \ \ket{u} & \setwiretype{n}
+\end{quantikz}
+\end{document}

@@ -1,0 +1,56 @@
+\documentclass[tikz]{standalone}
+\usepackage{amsmath}
+\usepackage{braket}
+\usepackage{tikz}
+\usepackage{tikz-3dplot}
+\usetikzlibrary{3d}
+
+% Set 3D plot view angle
+\tdplotsetmaincoords{70}{110}
+
+\def\rvec{3}
+\def\thetavec{40}
+\def\phivec{60}
+
+\begin{document}
+
+\begin{tikzpicture}[tdplot_main_coords]
+  \coordinate (O) at (0,0,0);
+
+  % Shaded ball (not working in svg)
+  %\shade[ball color=lightgray, opacity=0.5] (0,0,0) circle (\rvec cm);
+  \fill[lightgray!40] (0,0,0) circle (\rvec cm);
+
+  % Axes
+  \draw[] (0,0,0) -- (\rvec,0,0);
+  \draw[] (0,0,0) -- (0,\rvec,0);
+  \draw[] (0,0,0) -- (0,0,\rvec);
+
+  % Great circles
+  \draw[canvas is xy plane at z=0, red, dashed] (0,0) circle (\rvec);
+  \draw[canvas is zx plane at y=0, green, dashed] (0,0) circle (\rvec);
+
+  % Eigenstates
+  \draw plot [mark=*, mark size=1] (0, 0, \rvec) node[anchor=south, shift=({-0.3,0})] {\scriptsize $\ket{0} = \ket{\uparrow_{\hat{\mathbf{z}}}}$};
+  \draw plot [mark=*, mark size=1] (0, 0, -\rvec) node[anchor=north, shift=({0.3,0})] {\scriptsize $\ket{1} = \ket{\downarrow_{\hat{\mathbf{z}}}}$};
+
+  \draw plot [mark=*, mark size=1] (0, \rvec, 0) node[anchor=west, shift=({0,0.2})] {\scriptsize $\ket{i} = \ket{\uparrow_{\hat{\mathbf{y}}}}$};
+  \draw plot [mark=*, mark size=1] (0, -\rvec, 0) node[anchor=east, shift=({0,-0.2})] {\scriptsize $\ket{-i} = \ket{\downarrow_{\hat{\mathbf{y}}}}$};
+
+  \draw plot [mark=*, mark size=1] (\rvec, 0, 0) node[anchor=north east] {\scriptsize $\ket{+} = \ket{\uparrow_{\hat{\mathbf{x}}}}$};
+  \draw plot [mark=*, mark size=1] (-\rvec, 0, 0) node[anchor=south west, shift=({-0.2,0.2})] {\scriptsize $\ket{-} = \ket{\downarrow_{\hat{\mathbf{x}}}}$};
+
+  % Qubit
+  \tdplotsetcoord{P}{\rvec}{\thetavec}{\phivec};
+  \draw[thick,->,color=blue] (0,0,0) -- (P) node[anchor=south west] {\scriptsize $\ket{\psi} = \ket{\uparrow_{\hat{\mathbf{n}}(\theta,\phi)}}$};
+  \draw[dashed, color=blue] (O) -- (Pxy);
+  \draw[dashed, color=blue] (P) -- (Pxy);
+
+  \tdplotdrawarc{(O)}{0.3*\rvec}{0}{\phivec}{anchor=north}{$\phi$};
+
+  \tdplotsetthetaplanecoords{\phivec};
+  \tdplotdrawarc[tdplot_rotated_coords]{(O)}{0.3*\rvec}{0}{\thetavec}{anchor=south west}{$\theta$};
+
+\end{tikzpicture}
+
+\end{document}

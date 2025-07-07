@@ -1,0 +1,20 @@
+\documentclass[tikz, border=5pt]{standalone}
+\usepackage{quantikz}
+
+\begin{document}
+\begin{quantikz}[wire types={q,n,q,n,q,n,n,n,q,n,q,n,q}]
+  \lstick{\ket{x_{n-1}}} & \gate{H} \gategroup[13, steps=19]{$F$} & \gate{R_{n-1,n-2}} & \gate{R_{n-1,n-3}} & \ \ldots\ & \gate{R_{n-1,1}} & \gate{R_{n-1,0}} &&& \ \ldots\ &&& \ \ldots\ &&&& \swap{12} &&&& \rstick{$\frac{1}{\sqrt{2}}\left(\ket{0} + e^{i2\pi 0_{.x_0}}\right)$} \\[-0.2cm]
+  \lstick{\otimes} &&&&&&&&&&&&&&&&&&&& \rstick{\otimes} \\[-0.2cm]
+  \lstick{\ket{x_{n-2}}} && \ctrl{-2} && \ \ldots\ &&& \gate{H} & \gate{R_{n-2,n-3}} & \ \ldots\ & \gate{R_{n-2,1}} & \gate{R_{n-2,0}} & \ \ldots\ &&&&& \swap{8} &&& \rstick{$\frac{1}{\sqrt{2}}\left(\ket{0} + e^{i2\pi 0_{.x_1 x_0}}\right)$} \\[-0.2cm]
+  \lstick{\otimes} &&&&&&&&&&&&&&&&&&&& \rstick{\otimes} \\
+  \lstick{\ket{x_{n-3}}} &&& \ctrl{-4} & \ \ldots\ &&&& \ctrl{-2} & \ \ldots\ &&& \ \ldots\ &&&&&& \swap{4} && \rstick{$\frac{1}{\sqrt{2}}\left(\ket{0} + e^{i2\pi 0_{.x_2 x_1 x_0}}\right)$} \\
+  \lstick{\otimes} &&&&&&&&&&&&&&&&&&&& \rstick{\otimes} \\[-0.4cm]
+  \lstick{\vdots} &&&&&&&&&&&&&&&&&&& \ddots & \rstick{\vdots} \\[-0.2cm]
+  \lstick{\otimes} &&&&&&&&&&&&&&&&&&&& \rstick{\otimes} \\
+  \lstick{\ket{x_2}} &&&& \ \ldots\ &&&&& \ \ldots\ &&& \ \ldots\ &&&&&& \targX{} && \rstick{$\frac{1}{\sqrt{2}}\left(\ket{0} + e^{i2\pi 0_{.x_{n-3}\dots x_0}}\right)$} \\
+  \lstick{\otimes} &&&&&&&&&&&&&&&&&&&& \rstick{\otimes} \\[-0.2cm]
+  \lstick{\ket{x_1}} &&&& \ \ldots\ & \ctrl{-10} &&&& \ \ldots\ & \ctrl{-8} && \ \ldots\ & \gate{H} & \gate{R_{1,0}} &&& \targX{} &&& \rstick{$\frac{1}{\sqrt{2}}\left(\ket{0} + e^{i2\pi 0_{.x_{n-2}\dots x_0}}\right)$} \\[-0.2cm]
+  \lstick{\otimes} &&&&&&&&&&&&&&&&&&&& \rstick{\otimes} \\[-0.2cm]
+  \lstick{\ket{x_0}} &&&&&& \ctrl{-12} &&&&& \ctrl{-10} &&& \ctrl{-2} & \gate{H} & \targX{} &&&& \rstick{$\frac{1}{\sqrt{2}}\left(\ket{0} + e^{i2\pi 0_{.x_{n-1} \dots x_0}}\right)$}
+\end{quantikz}
+\end{document}

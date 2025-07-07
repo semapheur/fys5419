@@ -1,0 +1,39 @@
+[project]
+name = "fys5419"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+  "ipykernel",
+  "matplotlib",
+  "mystmd>=1.3.28",
+  "numba>=0.61.0",
+  "numpy",
+  "pylatexenc>=2.10",
+  "qiskit-aer>=0.16.1",
+  "qiskit[visualization]",
+  "scipy>=1.15.2",
+  "sympy>=1.13.3",
+  "tqdm>=4.67.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy",
+  "ruff",
+]
+
+[mypy]
+plugins = [
+  "numpy.typing.mypy_plugin",
+  "pandera.mypy",
+  "pydantic.mypy"
+]
+
+[tool.ruff]
+indent-width = 2
+
+[tool.ruff.format]
+quote-style = "double"
+docstring-code-format = true

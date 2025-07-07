@@ -1,0 +1,20 @@
+\documentclass[border=2px]{standalone}
+
+\usepackage{quantikz}
+
+\begin{document}
+\begin{quantikz}[wire types={q,q}]
+  % ZI
+  \lstick{\ket{0}} & \gate{R_x (\theta_0)}\gategroup[8, steps=3, style={dashed,rounded corners,fill=blue!20},background]{\footnotesize{Prepare ansatz}} & \gate{R_y (\phi_0)} & \ctrl{1} & \gategroup[8, steps=2, style={dashed,rounded corners,fill=red!20}, label style={label position=below, anchor=north, yshift=-0.2cm}, background]{\footnotesize{Rotate basis}} &  & \meter{}\gategroup[8, steps=1, style={dashed,rounded corners,fill=green!20},background]{\footnotesize{Measure}} & \setwiretype{c} \rstick[2]{\braket{\psi(\boldsymbol{\theta})|\hat{Z}\otimes\hat{I}|\psi(\boldsymbol{\theta})}} \\
+  \lstick{\ket{0}} & \gate{R_x (\theta_1)} & \gate{R_y (\phi_1)} & \targ{} & & & \meter{} & \setwiretype{c} \\
+  % IZ
+  \lstick{\ket{0}} & \gate{R_x (\theta_0)} & \gate{R_y (\phi_0)} & \ctrl{1} & \swap{1} & & \meter{} & \setwiretype{c} \rstick[2]{\braket{\psi(\boldsymbol{\theta})|\hat{I}\otimes\hat{Z}|\psi(\boldsymbol{\theta})}} \\
+  \lstick{\ket{0}} & \gate{R_x (\theta_1)} & \gate{R_y (\phi_1)} & \targ{} & \targX{} & & \meter{} & \setwiretype{c} \\
+  % ZZ
+  \lstick{\ket{0}} & \gate{R_x (\theta_0)} & \gate{R_y (\phi_0)} & \ctrl{1} & \targ{} & & \meter{} & \setwiretype{c} \rstick[2]{\braket{\psi(\boldsymbol{\theta})|\hat{Z}\otimes\hat{Z}|\psi(\boldsymbol{\theta})}} \\
+  \lstick{\ket{0}} & \gate{R_x (\theta_1)} & \gate{R_y (\phi_1)} & \targ{} & \ctrl{-1} & & \meter{} & \setwiretype{c} \\
+  % XX
+  \lstick{\ket{0}} & \gate{R_x (\theta_0)} & \gate{R_y (\phi_0)} & \ctrl{1} & \gate{H} & \targ{} & \meter{} & \setwiretype{c} \rstick[2]{\braket{\psi(\boldsymbol{\theta})|\hat{X}\otimes\hat{X}|\psi(\boldsymbol{\theta})}} \\
+  \lstick{\ket{0}} & \gate{R_x (\theta_1)} & \gate{R_y (\phi_1)} & \targ{} & \gate{H} & \ctrl{-1} & \meter{} & \setwiretype{c}
+\end{quantikz}
+\end{document}
