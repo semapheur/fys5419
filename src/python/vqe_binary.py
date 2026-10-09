@@ -1,17 +1,16 @@
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
-from numpy.typing import NDArray
-import qiskit_aer
 import qiskit as qk
-
+import qiskit_aer
+from numpy.typing import NDArray
 from qubit import NQubitState, basis_state
 from vqe_utils import (
-  measure_z,
-  measurement_expectation,
   measure_nth_z,
-  measure_zz,
   measure_xx,
+  measure_z,
+  measure_zz,
+  measurement_expectation,
 )
 
 sigma_x = np.array([[0.0, 1.0], [1.0, 0.0]])

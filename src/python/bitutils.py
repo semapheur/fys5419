@@ -1,5 +1,5 @@
 import itertools
-from typing import cast, Iterable, Literal, Sequence
+from typing import Iterable, Literal, Sequence, cast
 
 type Bit = Literal[0, 1]
 type Bits = Sequence[Bit]

@@ -2,7 +2,7 @@ import fractions
 import math
 import random
 
-from bitutils import bits_to_decimal, bits_to_fraction, bit_product
+from bitutils import bit_product, bits_to_decimal, bits_to_fraction
 from circuit import QuantumCircuit
 from qubit import QubitRegister, basis_state
 

@@ -1,11 +1,11 @@
 from __future__ import annotations
+
 from typing import cast
 
 import numpy as np
 from numpy.typing import ArrayLike
-
 from qubit import NQubitState
-from tensor import Tensor, COMPLEX_DTYPE
+from tensor import COMPLEX_DTYPE, Tensor
 
 
 class Gate(Tensor):

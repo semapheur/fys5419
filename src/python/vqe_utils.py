@@ -1,14 +1,13 @@
 from functools import partial
-from typing import cast, Callable
+from typing import Callable
 
 import numpy as np
-from numpy.typing import NDArray
 import qiskit as qk
+from numpy.typing import NDArray
+from optimize import Optimizer, minimize_energy
+from qubit import NQubitState, basis_state
 from scipy.optimize import minimize
 from tqdm import tqdm
-
-from qubit import NQubitState, basis_state
-from optimize import minimize_energy, Optimizer
 
 
 def prepare_ansatz(angles: NDArray[np.float64]) -> NQubitState:
@@ -17,7 +16,6 @@ def prepare_ansatz(angles: NDArray[np.float64]) -> NQubitState:
 
   Args:
     angles (NDArray[np.float64]): Parameter vector [theta_0, phi_0, theta_1, phi_1, ..., theta_n, phi_n]
-    num_qubits (int): Number of qubits in the ansatz state
 
   Returns:
     NQubitState: VQE ansatz state
@@ -54,7 +52,6 @@ def qiskit_prepare_ansatz(angles: NDArray[np.float64]) -> qk.QuantumCircuit:
 
   Args:
     angles (NDArray[np.float64]): Parameter vector [theta_0, phi_0, theta_1, phi_1, ..., theta_n, phi_n]
-    num_qubits (int): Number of qubits in the ansatz state
 
   Returns:
     QuantumCircuit: VQE ansatz state
@@ -107,19 +104,59 @@ def measurement_expectation(
   return expectation / shots
 
 
-def measure_z(qubit: NQubitState, shots: int) -> float:
+def measure_pauli(state: NQubitState, pauli: str, shots: int) -> float:
   """
-  Measure a qubit state in the Z⊗I⊗...⊗I basis
+  Measure a qubit state for a given Pauli string
 
   Args:
     qubit (NQubitState): Qubit state to measure
+    pauli (str): Pauli string
     shots (int): Number of measurement shots
 
   Returns:
     float: Expectation value
   """
-  outcome = cast(dict[str, int], qubit.measure(list(range(qubit.num_qubits)), shots))
-  return measurement_expectation(outcome, shots)
+
+  n = state.num_qubits
+  pauli = pauli.upper().ljust(n, "I")
+  if len(pauli) != n:
+    raise ValueError(f"Pauli string longer than {n} qubits")
+
+  psi = state.copy()
+  mask = 0
+  for q, p in enumerate(pauli):
+    if p == "X":
+      psi.hadamard(q)
+    elif p == "Y":
+      psi.s_dagger(q)
+      psi.hadamard(q)
+    elif p not in "IZ":
+      raise ValueError(f"Invalid Pauli character {p!r}")
+
+    if p != "I":
+      mask |= 1 << (n - 1 - q)
+
+  probs = psi.get_probabilities()
+  signs = np.array([1 - 2 * (bin(i & mask).count("1") & 1) for i in range(len(probs))])
+  samples = np.random.choice(len(probs), size=shots, p=probs / probs.sum())
+  return float(signs[samples].mean())
+
+
+def _term(pauli: str):
+  def fn(qubit: NQubitState, shots: int) -> float:
+    return measure_pauli(qubit, pauli, shots)
+
+  fn.__name__ = f"measure_{pauli.lower()}"
+  return fn
+
+
+measure_z, measure_zz, measure_xx, measure_yy = (
+  _term(p) for p in ("Z", "ZZ", "XX", "YY")
+)
+measure_zizi, measure_xixi, measure_xiix = _term("ZIZI"), _term("XIXI"), _term("XIIX")
+measure_ixxi, measure_ixix, measure_iixx = _term("IXXI"), _term("IXIX"), _term("IIXX")
+measure_yiyi, measure_yiiy, measure_iyyi = _term("YIYI"), _term("YIIY"), _term("IYYI")
+measure_iyiy, measure_iiyy = _term("IYIY"), _term("IIYY")
 
 
 def measure_nth_z(qubit: NQubitState, z_index: int, shots: int) -> float:
@@ -128,317 +165,15 @@ def measure_nth_z(qubit: NQubitState, z_index: int, shots: int) -> float:
 
   Args:
     qubit (NQubitState): Qubit state to measure
-    shots (int): Number of measurement shots
-
-  Returns:
-    float: Expectation value
-  """
-  if z_index >= qubit.num_qubits:
-    raise ValueError("Qubit index out of range")
-
-  qubit.swap(0, z_index)
-
-  outcome = cast(dict[str, int], qubit.measure(list(range(qubit.num_qubits)), shots))
-  return measurement_expectation(outcome, shots)
-
-
-def measure_zz(qubit: NQubitState, shots: int) -> float:
-  """
-  Measure a two-qubit state in the Z⊗Z⊗I⊗...⊗I basis
-
-  Args:
-    qubit (NQubitState): Qubit state to measure
-    shots (int): Number of measurement shots
-
-  Returns:
-    float: Expectation value
-  """
-  qubit.cnot(1, 0)
-
-  outcome = cast(dict[str, int], qubit.measure(list(range(qubit.num_qubits)), shots))
-  return measurement_expectation(outcome, shots)
-
-
-def measure_xx(qubit: NQubitState, shots: int) -> float:
-  """
-  Measure a qubit state in the X⊗X⊗I⊗...⊗I basis
-
-  Args:
-    qubit (NQubitState): Qubit state to measure
-    shots (int): Number of measurement shots
-
-  Returns:
-    float: Expectation value
-  """
-  qubit.hadamard(0)
-  qubit.hadamard(1)
-  qubit.cnot(1, 0)
-
-  outcome = cast(dict[str, int], qubit.measure(list(range(qubit.num_qubits)), shots))
-  return measurement_expectation(outcome, shots)
-
-
-def measure_yy(qubit: NQubitState, shots: int) -> float:
-  """
-  Measure a qubit state in the Y⊗Y⊗I⊗...⊗I basis
-
-  Args:
-    qubit (NQubitState): Qubit state to measure
-    shots (int): Number of measurement shots
-
-  Returns:
-    float: Expectation value
-  """
-  qubit.s_dagger(0)
-  qubit.hadamard(0)
-  qubit.s_dagger(1)
-  qubit.hadamard(1)
-  qubit.cnot(1, 0)
-
-  outcome = cast(dict[str, int], qubit.measure(list(range(qubit.num_qubits)), shots))
-  return measurement_expectation(outcome, shots)
-
-
-def measure_zizi(qubit: NQubitState, shots: int) -> float:
-  """
-  Measure a four-qubit state in the Z⊗I⊗Z⊗I basis
-
-  Args:
-    qubit (NQubitState): Qubit state to measure
-    shots (int): Number of measurement shots
-
-  Returns:
-    float: Expectation value
-  """
-  qubit.swap(0, 1)
-  qubit.cnot(1, 0)
-
-  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
-  return measurement_expectation(outcome, shots)
-
-
-def measure_xixi(qubit: NQubitState, shots: int) -> float:
-  """
-  Measure a four-qubit state in the X⊗I⊗X⊗I basis
-
-  Args:
-    qubit (NQubitState): Qubit state to measure
+    z_index (int): Index of Z
     shots (int): Number of measurement shots
 
   Returns:
     float: Expectation value
   """
 
-  qubit.hadamard(0)
-  qubit.hadamard(2)
-
-  qubit.swap(0, 1)
-  qubit.cnot(1, 0)
-  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
-  return measurement_expectation(outcome, shots)
-
-
-def measure_xiix(qubit: NQubitState, shots: int) -> float:
-  """
-  Measure a four-qubit state in the X⊗I⊗I⊗X basis
-
-  Args:
-    qubit (NQubitState): Qubit state to measure
-    shots (int): Number of measurement shots
-
-  Returns:
-    float: Expectation value
-  """
-
-  qubit.hadamard(0)
-  qubit.swap(2, 3)
-  qubit.hadamard(2)
-
-  qubit.swap(0, 1)
-  qubit.cnot(1, 0)
-  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
-  return measurement_expectation(outcome, shots)
-
-
-def measure_ixxi(qubit: NQubitState, shots: int) -> float:
-  """
-  Measure a four-qubit state in the I⊗X⊗X⊗I basis
-
-  Args:
-    qubit (NQubitState): Qubit state to measure
-    shots (int): Number of measurement shots
-
-  Returns:
-    float: Expectation value
-  """
-
-  qubit.swap(0, 1)
-  qubit.hadamard(0)
-  qubit.hadamard(2)
-
-  qubit.swap(0, 1)
-  qubit.cnot(1, 0)
-  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
-  return measurement_expectation(outcome, shots)
-
-
-def measure_ixix(qubit: NQubitState, shots: int) -> float:
-  """
-  Measure a four-qubit state in the I⊗X⊗I⊗X basis
-
-  Args:
-    qubit (NQubitState): Qubit state to measure
-    shots (int): Number of measurement shots
-
-  Returns:
-    float: Expectation value
-  """
-
-  qubit.swap(0, 1)
-  qubit.hadamard(0)
-  qubit.hadamard(2)
-
-  qubit.swap(0, 1)
-  qubit.cnot(1, 0)
-  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
-  return measurement_expectation(outcome, shots)
-
-
-def measure_iixx(qubit: NQubitState, shots: int) -> float:
-  """
-  Measure a four-qubit state in the I⊗I⊗X⊗X basis
-
-  Args:
-    qubit (NQubitState): Qubit state to measure
-    shots (int): Number of measurement shots
-
-  Returns:
-    float: Expectation value
-  """
-
-  qubit.hadamard(2)
-  qubit.hadamard(3)
-  qubit.swap(0, 2)
-
-  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
-  return measurement_expectation(outcome, shots)
-
-
-def measure_yiyi(qubit: NQubitState, shots: int) -> float:
-  """
-  Measure a four-qubit state in the Y⊗I⊗Y⊗I basis
-
-  Args:
-    qubit (NQubitState): Qubit state to measure
-    shots (int): Number of measurement shots
-
-  Returns:
-    float: Expectation value
-  """
-
-  qubit.s_dagger(0)
-  qubit.hadamard(0)
-  qubit.s_dagger(2)
-  qubit.hadamard(2)
-
-  qubit.swap(0, 1)
-  qubit.cnot(1, 0)
-  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
-  return measurement_expectation(outcome, shots)
-
-
-def measure_yiiy(qubit: NQubitState, shots: int) -> float:
-  """
-  Measure a four-qubit state in the Y⊗I⊗I⊗Y basis
-
-  Args:
-    qubit (NQubitState): Qubit state to measure
-    shots (int): Number of measurement shots
-
-  Returns:
-    float: Expectation value
-  """
-
-  qubit.s_dagger(0)
-  qubit.hadamard(0)
-  qubit.swap(2, 3)
-  qubit.s_dagger(2)
-  qubit.hadamard(2)
-
-  qubit.swap(0, 1)
-  qubit.cnot(1, 0)
-  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
-  return measurement_expectation(outcome, shots)
-
-
-def measure_iyyi(qubit: NQubitState, shots: int) -> float:
-  """
-  Measure a four-qubit state in the I⊗Y⊗Y⊗I basis
-
-  Args:
-    qubit (NQubitState): Qubit state to measure
-    shots (int): Number of measurement shots
-
-  Returns:
-    float: Expectation value
-  """
-
-  qubit.swap(0, 1)
-  qubit.s_dagger(0)
-  qubit.hadamard(0)
-  qubit.s_dagger(2)
-  qubit.hadamard(2)
-
-  qubit.swap(0, 1)
-  qubit.cnot(1, 0)
-  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
-  return measurement_expectation(outcome, shots)
-
-
-def measure_iyiy(qubit: NQubitState, shots: int) -> float:
-  """
-  Measure a four-qubit state in the I⊗Y⊗I⊗Y basis
-
-  Args:
-    qubit (NQubitState): Qubit state to measure
-    shots (int): Number of measurement shots
-
-  Returns:
-    float: Expectation value
-  """
-
-  qubit.swap(0, 1)
-  qubit.s_dagger(0)
-  qubit.hadamard(0)
-  qubit.s_dagger(2)
-  qubit.hadamard(2)
-
-  qubit.swap(0, 1)
-  qubit.cnot(1, 0)
-  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
-  return measurement_expectation(outcome, shots)
-
-
-def measure_iiyy(qubit: NQubitState, shots: int) -> float:
-  """
-  Measure a four-qubit state in the I⊗I⊗Y⊗Y basis
-
-  Args:
-    qubit (NQubitState): Qubit state to measure
-    shots (int): Number of measurement shots
-
-  Returns:
-    float: Expectation value
-  """
-
-  qubit.s_dagger(2)
-  qubit.hadamard(2)
-  qubit.s_dagger(3)
-  qubit.hadamard(3)
-  qubit.swap(0, 2)
-
-  outcome = cast(dict[str, int], qubit.measure([0, 1, 2, 3], shots))
-  return measurement_expectation(outcome, shots)
+  pauli = "I" * z_index + "Z"
+  return measure_pauli(qubit, pauli, shots)
 
 
 def vqe_energies(

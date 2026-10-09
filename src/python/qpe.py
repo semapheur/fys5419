@@ -1,13 +1,12 @@
 from typing import Callable, cast
 
 import numpy as np
-from numpy.typing import NDArray
 import scipy as sp
-from tqdm import tqdm
-
 from circuit import QuantumCircuit
-from gate import Gate, hadamard_gate, controlled_gate, fourier_transform
+from gate import Gate, controlled_gate, fourier_transform, hadamard_gate
+from numpy.typing import NDArray
 from qubit import NQubitState, basis_state
+from tqdm import tqdm
 
 
 def random_unitary_matrix(num_qubits: int):

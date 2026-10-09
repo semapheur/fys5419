@@ -1,10 +1,9 @@
 from typing import cast
 
 import numpy as np
-from numpy.typing import NDArray
-import qiskit_aer
 import qiskit as qk
-
+import qiskit_aer
+from numpy.typing import NDArray
 from qubit import basis_state
 from vqe_utils import measurement_expectation
 

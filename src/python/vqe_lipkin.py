@@ -2,9 +2,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 from numpy.typing import NDArray
-from qiskit.quantum_info import SparsePauliOp
 from qiskit.primitives import Estimator
-
+from qiskit.quantum_info import SparsePauliOp
 from vqe_utils import (
   measure_iixx,
   measure_iiyy,
@@ -12,15 +11,15 @@ from vqe_utils import (
   measure_ixxi,
   measure_iyiy,
   measure_iyyi,
+  measure_nth_z,
   measure_xiix,
   measure_xixi,
+  measure_xx,
   measure_yiiy,
   measure_yiyi,
-  prepare_ansatz,
-  measure_nth_z,
-  measure_z,
-  measure_xx,
   measure_yy,
+  measure_z,
+  prepare_ansatz,
   qiskit_prepare_ansatz,
 )
 

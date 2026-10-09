@@ -1,11 +1,10 @@
 from enum import Enum
-from typing import cast, Protocol, runtime_checkable
-
-import numpy as np
-from scipy.linalg import sqrtm
+from typing import Protocol, cast, runtime_checkable
 
 import gate
+import numpy as np
 from qubit import NQubitState, QubitRegister
+from scipy.linalg import sqrtm
 
 
 class Operation(Enum):
@@ -246,11 +245,9 @@ class QuantumCircuit:
     setattr(
       self,
       name,
-      lambda control, target, cond=True: self.apply_controlled_gate(
-        gate, control, target, name
-      )
-      if cond
-      else None,
+      lambda control, target, cond=True: (
+        self.apply_controlled_gate(gate, control, target, name) if cond else None
+      ),
     )
 
   def add_circuit(self, circuit: "QuantumCircuit", offset: int = 0):
@@ -430,5 +427,5 @@ class QuantumCircuit:
   def stats(self) -> str:
     return f"""Circuit statistics
       Qubits: {self.num_qubits}
-      Gates: {self.ir.num_nodes}        
+      Gates: {self.ir.num_nodes}
     """

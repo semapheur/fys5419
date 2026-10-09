@@ -1,16 +1,18 @@
+# Portions derived from qcc4cp/qcc (c) 2022 Robert Hundt, licensed under Apache-2.0. See NOTICE.md.
+
 from __future__ import annotations
+
 from collections import Counter
 from itertools import chain
 from typing import Literal
 
-from numba import jit
 import numpy as np
+from bitutils import Bits, bits_to_decimal
+from numba import jit
 from numpy.typing import ArrayLike, NDArray
 from qiskit import QuantumCircuit
-
-from bitutils import bits_to_decimal, Bits
-from tensor import Tensor, COMPLEX_DTYPE
-from typehints import PolarAngle, AzimuthalAngle
+from tensor import COMPLEX_DTYPE, Tensor
+from typehints import AzimuthalAngle, PolarAngle
 
 BELL_STATES = [
   np.array([1, 0, 0, 1]) / np.sqrt(2),  # |Φ+⟩
@@ -394,16 +396,20 @@ class NQubitState(Tensor):
   def measure_simple(
     self, shots: int, register: QubitRegister | list[int] | None = None
   ) -> dict[str, int]:
+    if shots < 1:
+      raise ValueError(f"Shots must be at least 1. Got {shots}")
+    if register is not None and len(register) == 0:
+      raise ValueError("Register must contain at least one qubit")
+
     probs = self.get_probabilities(register)
+    probs = probs / probs.sum()
 
-    outcomes = np.random.choice(len(probs), size=(shots), p=probs)
-    counts: dict[str, int] = {}
+    width = len(probs).bit_length() - 1
 
-    for o in outcomes:
-      bitstring = format(o, f"0{self.num_qubits}b")
-      counts[bitstring] = counts.get(bitstring, 0) + 1
+    samples = np.random.choice(len(probs), size=(shots), p=probs)
+    values, counts = np.unique(samples, return_counts=True)
 
-    return dict(sorted(counts.items()))
+    return {format(int(v), f"0{width}b"): int(c) for v, c in zip(values, counts)}
 
   def apply_unary_gate(self, gate: np.ndarray, target: int):
     # Reverse target index
@@ -603,12 +609,11 @@ class NQubitState(Tensor):
     self.cnot(qubit2, qubit1)
     self.cnot(qubit1, qubit2)
 
-  def flip(self, register: QubitRegister | None = None):
-    qubit_range = register or range(self.num_qubits)
-    n = len(qubit_range)
-
+  def flip(self, register: QubitRegister | list[int] | None = None):
+    qubits = list(register) if register is not None else list(range(self.num_qubits))
+    n = len(qubits)
     for i in range(n // 2):
-      self.swap(qubit_range[i], qubit_range[n - 1 - i])
+      self.swap(qubits[i], qubits[n - 1 - i])
 
   def controlled_phase(self, control: int, target: int, phase: float):
     """Apply a controlled phase gate.
@@ -634,22 +639,21 @@ class NQubitState(Tensor):
       inverse (bool): If True, the inverse QFT is applied.
     """
 
-    qubit_range = register or range(self.num_qubits)
-    n = len(qubit_range)
+    qubits = list(register) if register is not None else list(range(self.num_qubits))
+    n = len(qubits)
 
-    for j in qubit_range:
-      self.hadamard(qubit_range[j])
-
-      for k in range(j + 1, n):
-        phase = np.pi / (1 << (k - j))  # np.pi / (2 ** (k - j))
-
-        if inverse:
-          phase = -phase
-
-        self.controlled_phase(qubit_range[k], qubit_range[j], phase)
-
-    # Reverse qubit order
-    self.flip(register)
+    if not inverse:
+      for j in range(n):
+        self.hadamard(qubits[j])
+        for k in range(j + 1, n):
+          self.controlled_phase(qubits[k], qubits[j], np.pi / (1 << (k - j)))
+      self.flip(qubits)
+    else:  # exact reverse of the forward circuit, with negated phases
+      self.flip(qubits)
+      for j in reversed(range(n)):
+        for k in reversed(range(j + 1, n)):
+          self.controlled_phase(qubits[k], qubits[j], -np.pi / (1 << (k - j)))
+        self.hadamard(qubits[j])
 
   def dump_state(self, decimals: int = 3) -> str:
     """Print the current state in the computational basis."""
@@ -852,8 +856,8 @@ def create_bell_state(state: Literal[0, 1, 2, 3]) -> NQubitState:
     state (int): Bell state to initialize the qubit in. Can be 0, 1, 2, or 3.
     - 0 initializes |00⟩ resulting in |Φ+⟩ = (1/√2)*(|00⟩ + |11⟩)
     - 1 initializes |01⟩ resulting in |Ψ+⟩ = (1/√2)*(|01⟩ + |10⟩)
-    - 2 initializes |10⟩ resulting in |Ψ-⟩ = (1/√2)*(|00⟩ - |11⟩)
-    - 3 initializes |11⟩ resulting in |Φ-⟩ = (1/√2)*(|01⟩ - |10⟩)
+    - 2 initializes |10⟩ resulting in |Φ-⟩ = (1/√2)*(|00⟩ - |11⟩)
+    - 3 initializes |11⟩ resulting in |Ψ-⟩ = (1/√2)*(|01⟩ - |10⟩)
   """
 
   bell_state = basis_state(2, state)
